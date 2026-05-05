@@ -1,531 +1,467 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>AttendPay — Sistem Absensi & Penggajian</title>
-<!-- Tailwind CSS -->
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<!-- Google Fonts & Material Symbols -->
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-<!-- Supabase SDK -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-<script>
-tailwind.config = {
-  darkMode: "class",
-  theme: {
-    extend: {
-      colors: {
-        "surface": "#fbf8ff",
-        "surface-dim": "#dad9e3",
-        "surface-bright": "#fbf8ff",
-        "surface-container-lowest": "#ffffff",
-        "surface-container-low": "#f4f2fc",
-        "surface-container": "#eeedf7",
-        "surface-container-high": "#e8e7f1",
-        "surface-container-highest": "#e3e1eb",
-        "on-surface": "#1a1b22",
-        "on-surface-variant": "#444653",
-        "inverse-surface": "#2f3037",
-        "inverse-on-surface": "#f1f0fa",
-        "outline": "#757684",
-        "outline-variant": "#c4c5d5",
-        "surface-tint": "#3755c3",
-        "primary": "#00288e",
-        "on-primary": "#ffffff",
-        "primary-container": "#1e40af",
-        "on-primary-container": "#a8b8ff",
-        "inverse-primary": "#b8c4ff",
-        "secondary": "#006c49",
-        "on-secondary": "#ffffff",
-        "secondary-container": "#6cf8bb",
-        "on-secondary-container": "#00714d",
-        "tertiary": "#611e00",
-        "on-tertiary": "#ffffff",
-        "tertiary-container": "#872d00",
-        "on-tertiary-container": "#ffa583",
-        "error": "#ba1a1a",
-        "on-error": "#ffffff",
-        "error-container": "#ffdad6",
-        "on-error-container": "#93000a",
-        "background": "#fbf8ff",
-        "on-background": "#1a1b22",
-        "surface-variant": "#e3e1eb"
-      },
-      borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
-      spacing: { "lg": "24px", "xl": "32px", "xs": "4px", "2xl": "48px", "md": "16px", "base": "4px", "gutter": "24px", "margin": "32px", "sm": "8px" },
-      fontFamily: { "inter": ["Inter", "sans-serif"] },
-      fontSize: {
-        "body-sm":["14px", { lineHeight: "20px", fontWeight: "400" }],
-        "label-md": ["14px", { lineHeight: "20px", fontWeight: "600" }],
-        "code":["14px", { lineHeight: "20px", fontWeight: "400" }],
-        "h1":["30px", { lineHeight: "36px", letterSpacing: "-0.02em", fontWeight: "700" }],
-        "label-sm":["12px", { lineHeight: "16px", letterSpacing: "0.05em", fontWeight: "500" }],
-        "body-md":["16px", { lineHeight: "24px", fontWeight: "400" }],
-        "h3":["20px", { lineHeight: "28px", letterSpacing: "-0.01em", fontWeight: "600" }],
-        "h2":["24px", { lineHeight: "32px", letterSpacing: "-0.01em", fontWeight: "600" }],
-        "body-lg":["18px", { lineHeight: "28px", fontWeight: "400" }]
-      }
-    }
-  }
-}
-</script>
-<style>
-  .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
-  body { background-color: #f9fafb; font-family: 'Inter', sans-serif; }
-  .page { display: none; }
-  .page.active { display: block; }
-  .nav-item { transition: all 0.15s ease; }
-  .nav-item.active { color: #1d4ed8 !important; background-color: #eff6ff; border-left: 4px solid #1d4ed8; }
-  .nav-item:not(.active):hover { background-color: #f9fafb; }
-  .no-scrollbar::-webkit-scrollbar { display: none; }
-  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-  .page-transition { animation: fadeIn 0.2s ease; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }[data-nav] { cursor: pointer; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HRIS & Payroll System</title>
+    <!-- Tailwind CSS untuk Styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome untuk Icon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: { primary: '#4f46e5', secondary: '#1e293b' }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .hidden-view { display: none; }
+        /* Toggle Switch CSS */
+        .toggle-checkbox:checked { right: 0; border-color: #68D391; }
+        .toggle-checkbox:checked + .toggle-label { background-color: #68D391; }
+    </style>
 </head>
-<body class="text-on-background overflow-x-hidden">
+<body class="flex h-screen overflow-hidden">
 
-<!-- ===================== SIDEBAR ===================== -->
-<aside class="w-64 h-screen border-r fixed left-0 top-0 z-40 bg-white border-gray-200 shadow-sm flex flex-col font-inter text-sm font-medium">
-  <div class="px-6 py-8">
-    <h1 class="text-xl font-bold tracking-tight text-blue-800">AttendPay</h1>
-    <p class="text-xs text-gray-500 uppercase tracking-widest mt-1">HR Perusahaan</p>
-  </div>
-  <nav class="flex-1 flex flex-col px-2 space-y-1">
-    <div class="nav-item active flex items-center gap-3 px-4 py-3 text-gray-500 cursor-pointer rounded" data-nav="dashboard">
-      <span class="material-symbols-outlined">dashboard</span>
-      <span>Beranda</span>
-    </div>
-    <div class="nav-item flex items-center gap-3 px-4 py-3 text-gray-500 cursor-pointer rounded" data-nav="absensi">
-      <span class="material-symbols-outlined">fingerprint</span>
-      <span>Kehadiran</span>
-    </div>
-    <div class="nav-item flex items-center gap-3 px-4 py-3 text-gray-500 cursor-pointer rounded" data-nav="karyawan">
-      <span class="material-symbols-outlined">groups</span>
-      <span>Karyawan</span>
-    </div>
-    <div class="nav-item flex items-center gap-3 px-4 py-3 text-gray-500 cursor-pointer rounded" data-nav="payroll">
-      <span class="material-symbols-outlined">payments</span>
-      <span>Penggajian</span>
-    </div>
-    <div class="nav-item flex items-center gap-3 px-4 py-3 text-gray-500 cursor-pointer rounded" data-nav="pengaturan">
-      <span class="material-symbols-outlined">settings</span>
-      <span>Pengaturan</span>
-    </div>
-  </nav>
-  <div class="p-4 border-t border-gray-200">
-    <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
-      <div class="w-8 h-8 rounded-full bg-blue-700 flex items-center justify-center text-white font-bold text-xs">AU</div>
-      <div>
-        <p class="text-sm font-semibold text-on-background">Admin User</p>
-        <p class="text-xs text-gray-400">Super Admin</p>
-      </div>
-    </div>
-  </div>
-</aside>
-
-<!-- ===================== MAIN WRAPPER ===================== -->
-<div class="ml-64 min-h-screen flex flex-col">
-
-  <!-- TOP NAV -->
-  <header class="h-16 border-b sticky top-0 z-30 flex items-center justify-between w-full px-6 bg-white/80 backdrop-blur-md border-gray-200 shadow-sm">
-    <div class="flex items-center flex-1 max-w-xl">
-      <div class="relative w-full">
-        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
-        <input class="w-full bg-gray-50 border border-gray-200 rounded-lg pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="Cari data karyawan..." type="text"/>
-      </div>
-    </div>
-    <div class="flex items-center gap-4">
-      <button class="p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors relative">
-        <span class="material-symbols-outlined">notifications</span>
-        <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
-      </button>
-      <div class="h-8 w-px bg-gray-200 mx-1"></div>
-      <div class="w-8 h-8 rounded-full bg-blue-700 flex items-center justify-center text-white font-bold text-xs">AU</div>
-    </div>
-  </header>
-
-  <!-- ==================== PAGE: DASHBOARD ==================== -->
-  <div id="page-dashboard" class="page active page-transition p-lg flex-1">
-    <div class="mb-xl flex justify-between items-end">
-      <div>
-        <h2 class="text-3xl font-bold text-on-background">Selamat Datang, Admin</h2>
-        <p class="text-gray-500 mt-1">Berikut adalah ringkasan sistem Anda hari ini.</p>
-      </div>
-    </div>
-
-    <!-- KPI Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-gutter mb-xl">
-      <div class="bg-white p-lg rounded-xl border border-gray-200 shadow-sm">
-        <div class="flex justify-between items-start mb-4">
-          <div class="p-2 bg-blue-50 rounded-lg text-blue-700"><span class="material-symbols-outlined">person</span></div>
+    <!-- Sidebar -->
+    <aside class="w-64 bg-secondary text-white flex flex-col shadow-xl">
+        <div class="h-16 flex items-center justify-center border-b border-gray-700">
+            <h1 class="text-2xl font-bold tracking-wider"><i class="fa-solid fa-fingerprint text-blue-400 mr-2"></i> HRIS<span class="text-blue-400">Pro</span></h1>
         </div>
-        <p class="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-1">Total Karyawan</p>
-        <p class="text-2xl font-bold text-on-background">2</p>
-      </div>
-      <div class="bg-white p-lg rounded-xl border border-gray-200 shadow-sm">
-        <div class="flex justify-between items-start mb-4">
-          <div class="p-2 bg-green-50 rounded-lg text-green-700"><span class="material-symbols-outlined">how_to_reg</span></div>
+        <nav class="flex-1 px-4 py-6 space-y-2">
+            <button onclick="switchMenu('dashboard')" id="btn-dashboard" class="w-full flex items-center px-4 py-3 bg-primary rounded-lg transition-colors">
+                <i class="fa-solid fa-chart-pie w-6"></i> Dashboard
+            </button>
+            <button onclick="switchMenu('absensi')" id="btn-absensi" class="w-full flex items-center px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors">
+                <i class="fa-solid fa-calendar-check w-6"></i> Absensi
+            </button>
+            <button onclick="switchMenu('payroll')" id="btn-payroll" class="w-full flex items-center px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors">
+                <i class="fa-solid fa-file-invoice-dollar w-6"></i> Payroll
+            </button>
+        </nav>
+        <div class="p-4 border-t border-gray-700 text-sm text-gray-400 text-center">
+            &copy; 2026 HRIS System
         </div>
-        <p class="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-1">Kehadiran Hari Ini</p>
-        <p class="text-2xl font-bold text-on-background">2</p>
-      </div>
-      <div class="bg-white p-lg rounded-xl border border-gray-200 shadow-sm">
-        <div class="flex justify-between items-start mb-4">
-          <div class="p-2 bg-indigo-50 rounded-lg text-indigo-700"><span class="material-symbols-outlined">account_balance_wallet</span></div>
-        </div>
-        <p class="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-1">Est. Penggajian</p>
-        <p class="text-2xl font-bold text-on-background">Rp 16,6 Jt</p>
-      </div>
-      <div class="bg-white p-lg rounded-xl border border-gray-200 shadow-sm">
-        <div class="flex justify-between items-start mb-4">
-          <div class="p-2 bg-rose-50 rounded-lg text-rose-700"><span class="material-symbols-outlined">security</span></div>
-        </div>
-        <p class="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-1">Status Server</p>
-        <p class="text-2xl font-bold text-on-background">Online</p>
-      </div>
-    </div>
-  </div>
+    </aside>
 
-  <!-- ==================== PAGE: ABSENSI ==================== -->
-  <div id="page-absensi" class="page page-transition p-lg flex-1">
-    <div class="flex flex-col md:flex-row md:items-center justify-between mb-xl gap-4">
-      <div>
-        <h2 class="text-3xl font-bold text-on-background">Log Kehadiran</h2>
-        <p class="text-sm text-gray-500 mt-1">Pantau absensi karyawan yang tersinkronisasi dari database.</p>
-      </div>
-      <button class="flex items-center gap-2 bg-primary text-white px-lg py-2 rounded-lg font-semibold hover:brightness-110 shadow-sm" onclick="loadAttendance()">
-        <span class="material-symbols-outlined text-sm">refresh</span> Refresh Data
-      </button>
-    </div>
-
-    <div class="bg-white rounded-xl border border-outline-variant shadow-sm overflow-hidden">
-      <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse">
-          <thead class="bg-surface-container-low text-outline text-xs font-semibold uppercase tracking-widest">
-            <tr>
-              <th class="px-lg py-4 border-b border-outline-variant">Tanggal</th>
-              <th class="px-lg py-4 border-b border-outline-variant">Nama Karyawan</th>
-              <th class="px-lg py-4 border-b border-outline-variant">Jam Masuk</th>
-              <th class="px-lg py-4 border-b border-outline-variant">Jam Keluar</th>
-              <th class="px-lg py-4 border-b border-outline-variant">Status</th>
-              <th class="px-lg py-4 border-b border-outline-variant text-center">Poin Pokok</th>
-              <th class="px-lg py-4 border-b border-outline-variant text-center">Poin Lembur</th>
-            </tr>
-          </thead>
-          <!-- Data Dimuat via JS -->
-          <tbody id="table-absensi-body" class="text-sm text-on-background">
-            <tr><td colspan="7" class="text-center py-6 text-gray-400">Klik "Kehadiran" di sidebar untuk memuat data...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <!-- ==================== PAGE: KARYAWAN ==================== -->
-  <div id="page-karyawan" class="page page-transition p-lg flex-1">
-    <h2 class="text-3xl font-bold text-on-background mb-4">Manajemen Karyawan</h2>
-    <div class="bg-white p-8 rounded-xl border border-gray-200 shadow-sm text-center">
-      <span class="material-symbols-outlined text-gray-300 text-6xl mb-4">engineering</span>
-      <h3 class="text-lg font-bold text-gray-700">Halaman Dalam Pengembangan</h3>
-      <p class="text-gray-500">Modul detail dan tambah karyawan akan segera hadir.</p>
-    </div>
-  </div>
-
-  <!-- ==================== PAGE: PAYROLL ==================== -->
-  <div id="page-payroll" class="page page-transition p-lg flex-1">
-    <div class="mb-xl flex items-end justify-between">
-      <div>
-        <h2 class="text-3xl font-bold text-on-background">Manajemen Penggajian</h2>
-        <p class="text-sm text-gray-500 mt-1">Data gaji bulanan, potongan, dan kalkulasi total otomatis.</p>
-      </div>
-      <button class="flex items-center gap-2 bg-primary text-white px-lg py-2 rounded-lg font-semibold hover:brightness-110 shadow-sm" onclick="loadPayroll()">
-        <span class="material-symbols-outlined text-sm">refresh</span> Refresh Data
-      </button>
-    </div>
-
-    <!-- Table -->
-    <div class="bg-white rounded-xl border border-outline-variant shadow-sm overflow-hidden flex flex-col">
-      <div class="overflow-x-auto no-scrollbar">
-        <table class="w-full text-left border-collapse min-w-[900px]">
-          <thead>
-            <tr class="bg-gray-50 border-b border-outline-variant text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              <th class="px-lg py-md whitespace-nowrap">Nama Karyawan</th>
-              <th class="px-lg py-md whitespace-nowrap text-right">Gaji Pokok</th>
-              <th class="px-lg py-md whitespace-nowrap text-right">Gaji Bonus</th>
-              <th class="px-lg py-md whitespace-nowrap text-center">Potongan BPJS</th>
-              <th class="px-lg py-md whitespace-nowrap text-right">Total Gaji</th>
-              <th class="px-lg py-md whitespace-nowrap text-center">Status</th>
-            </tr>
-          </thead>
-          <!-- Data Dimuat via JS -->
-          <tbody id="table-payroll-body" class="divide-y divide-outline-variant text-sm">
-            <tr><td colspan="6" class="text-center py-6 text-gray-400">Memuat data payroll...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <!-- ==================== PAGE: PENGATURAN ==================== -->
-  <div id="page-pengaturan" class="page page-transition p-lg flex-1">
-    <div class="flex justify-between items-end mb-xl">
-      <div>
-        <h1 class="text-3xl font-bold text-on-background">Konfigurasi Sistem</h1>
-        <p class="text-sm text-gray-500 mt-1">Kelola tarif penggajian global dan potongan dari database Supabase.</p>
-      </div>
-      <button id="btn-save-settings" class="px-lg py-2 bg-primary text-white rounded-lg font-semibold shadow-sm hover:opacity-90 active:scale-95 transition-all">Simpan Perubahan</button>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-gutter">
-      <!-- Salary Rates -->
-      <section class="bg-white border border-outline-variant rounded-xl p-lg shadow-sm">
-        <div class="flex items-center gap-2 mb-6">
-          <span class="material-symbols-outlined text-primary">account_balance_wallet</span>
-          <h2 class="text-xl font-bold text-on-surface">Tarif Gaji & Poin</h2>
-        </div>
-        <div class="space-y-6">
-          <div class="space-y-2">
-            <label class="block text-sm font-semibold text-gray-600">Tarif Poin Dasar (Rp)</label>
-            <div class="relative">
-              <span class="absolute left-3 top-1/2 -translate-y-1/2 font-semibold text-gray-400">Rp</span>
-              <input id="input-base-rate" class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary transition-all" type="number" placeholder="Memuat..."/>
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col overflow-hidden relative">
+        <!-- Header -->
+        <header class="h-16 bg-white shadow-sm flex items-center justify-between px-8 z-10">
+            <h2 id="page-title" class="text-xl font-semibold text-gray-800">Dashboard</h2>
+            <div class="flex items-center space-x-4">
+                <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">A</div>
+                <span class="text-sm font-medium text-gray-700">Admin HR</span>
             </div>
-          </div>
-          <div class="space-y-2">
-            <label class="block text-sm font-semibold text-gray-600">Tarif Poin Lembur (Rp)</label>
-            <div class="relative">
-              <span class="absolute left-3 top-1/2 -translate-y-1/2 font-semibold text-gray-400">Rp</span>
-              <input id="input-overtime-rate" class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary transition-all" type="number" placeholder="Memuat..."/>
+        </header>
+
+        <!-- Content Area -->
+        <div class="flex-1 overflow-auto p-8 relative">
+            
+            <!-- Loading Overlay -->
+            <div id="loading" class="absolute inset-0 bg-white bg-opacity-75 z-50 flex flex-col items-center justify-center hidden">
+                <i class="fa-solid fa-spinner fa-spin text-4xl text-primary mb-4"></i>
+                <p class="text-gray-600 font-medium">Memuat Data Supabase...</p>
             </div>
-          </div>
-        </div>
-      </section>
 
-      <!-- BPJS -->
-      <section class="bg-white border border-outline-variant rounded-xl p-lg shadow-sm">
-        <div class="flex items-center gap-2 mb-6">
-          <span class="material-symbols-outlined text-primary">security</span>
-          <h2 class="text-xl font-bold text-on-surface">Pengaturan BPJS</h2>
-        </div>
-        <div class="space-y-6">
-          <div class="space-y-2">
-            <label class="block text-sm font-semibold text-gray-600">Persentase Potongan Karyawan</label>
-            <div class="relative">
-              <input id="input-bpjs-rate" class="w-full pr-8 pl-4 py-3 border border-gray-300 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary transition-all" type="number" step="0.1" placeholder="Memuat..."/>
-              <span class="absolute right-4 top-1/2 -translate-y-1/2 font-semibold text-gray-400">%</span>
+            <!-- DASHBOARD VIEW -->
+            <div id="view-dashboard" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-4">
+                        <div class="p-3 bg-blue-100 text-blue-600 rounded-lg text-2xl"><i class="fa-solid fa-users"></i></div>
+                        <div>
+                            <p class="text-sm text-gray-500 font-medium">Total Karyawan</p>
+                            <h3 id="dash-total-emp" class="text-2xl font-bold text-gray-800">-</h3>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-4">
+                        <div class="p-3 bg-green-100 text-green-600 rounded-lg text-2xl"><i class="fa-solid fa-check-double"></i></div>
+                        <div>
+                            <p class="text-sm text-gray-500 font-medium">Absensi Tercatat</p>
+                            <h3 id="dash-total-att" class="text-2xl font-bold text-gray-800">-</h3>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-4">
+                        <div class="p-3 bg-purple-100 text-purple-600 rounded-lg text-2xl"><i class="fa-solid fa-wallet"></i></div>
+                        <div>
+                            <p class="text-sm text-gray-500 font-medium">Status Payroll</p>
+                            <h3 class="text-lg font-bold text-gray-800">Menunggu Review</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h4 class="text-lg font-semibold mb-4 text-gray-700">Selamat Datang di Sistem HRIS</h4>
+                    <p class="text-gray-600">Sistem ini terintegrasi dengan mesin absensi sidik jari. Gunakan menu di sebelah kiri untuk mengelola data kehadiran dan melihat rekapitulasi gaji karyawan.</p>
+                </div>
             </div>
-          </div>
-          <div class="p-4 bg-blue-50 rounded-lg border-l-4 border-primary flex gap-3 mt-4">
-            <span class="material-symbols-outlined text-primary">info</span>
-            <p class="text-sm text-gray-600">Pembaruan tarif pada halaman ini akan langsung diperbarui ke database Anda dan mempengaruhi siklus payroll berikutnya.</p>
-          </div>
+
+            <!-- ABSENSI VIEW -->
+            <div id="view-absensi" class="hidden-view space-y-6">
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-wrap items-end gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Mulai Tanggal</label>
+                        <input type="date" id="filter-start" class="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary outline-none text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Sampai Tanggal</label>
+                        <input type="date" id="filter-end" class="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary outline-none text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Filter Karyawan</label>
+                        <input type="text" id="filter-name" placeholder="Semua Karyawan..." class="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary outline-none text-sm bg-gray-50" readonly>
+                        <button onclick="clearNameFilter()" class="ml-2 text-sm text-red-500 hover:underline hidden" id="btn-clear-name">Clear</button>
+                    </div>
+                    <button onclick="fetchAbsensi()" class="bg-primary hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition text-sm">
+                        <i class="fa-solid fa-filter mr-1"></i> Filter
+                    </button>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-gray-50 border-b border-gray-200 text-gray-600 text-sm">
+                                <th class="p-4 font-semibold">Hari, Tanggal</th>
+                                <th class="p-4 font-semibold">Nama Karyawan</th>
+                                <th class="p-4 font-semibold text-center">Jam Masuk</th>
+                                <th class="p-4 font-semibold text-center">Jam Keluar</th>
+                                <th class="p-4 font-semibold text-center">Poin Pokok</th>
+                                <th class="p-4 font-semibold text-center">Poin Lembur</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-absensi" class="text-sm divide-y divide-gray-100">
+                            <!-- Data Absensi Injected Here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- PAYROLL VIEW -->
+            <div id="view-payroll" class="hidden-view space-y-6">
+                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-md">
+                    <p class="text-sm text-yellow-700">
+                        <i class="fa-solid fa-circle-info mr-1"></i>
+                        Data Payroll di bawah dihitung berdasarkan rentang tanggal absensi terakhir yang difilter. Toggle BPJS akan langsung memotong Rp 50.000 dari Total Gaji.
+                    </p>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden overflow-x-auto">
+                    <table class="w-full text-left border-collapse min-w-[1000px]">
+                        <thead>
+                            <tr class="bg-gray-50 border-b border-gray-200 text-gray-600 text-xs uppercase tracking-wide">
+                                <th class="p-4 font-semibold">Nama</th>
+                                <th class="p-4 font-semibold text-center">Poin (P/E/B)</th>
+                                <th class="p-4 font-semibold text-right">Gaji Pokok</th>
+                                <th class="p-4 font-semibold text-right">Gaji Ekstra</th>
+                                <th class="p-4 font-semibold text-right">Bonus</th>
+                                <th class="p-4 font-semibold text-center">BPJS (50k)</th>
+                                <th class="p-4 font-semibold text-right text-primary">Total Gaji</th>
+                                <th class="p-4 font-semibold text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-payroll" class="text-sm divide-y divide-gray-100">
+                            <!-- Data Payroll Injected Here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
         </div>
-      </section>
-    </div>
-  </div>
+    </main>
 
-</div><!-- end main wrapper -->
+    <!-- Supabase JS Client (ES Module) -->
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
 
-<!-- ========================= SCRIPT LOGIKA APLIKASI ========================= -->
-<script>
-  // 1. SILAKAN GANTI URL DAN ANON KEY DI BAWAH INI MENGGUNAKAN MILIK ANDA
-  const SUPABASE_URL = 'https://ezuqjvcvrajhutijzggs.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV6dXFqdmN2cmFqaHV0aWp6Z2dzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5ODA2MzcsImV4cCI6MjA5MzU1NjYzN30.x93K-iB62GO15FDq1onwyX0zIuhhbCnEpBFm8eg9qfs';
-  
-  // Inisialisasi Klien Supabase
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Konfigurasi Supabase
+        const SUPABASE_URL = 'https://ezuqjvcvrajhutijzggs.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV6dXFqdmN2cmFqaHV0aWp6Z2dzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5ODA2MzcsImV4cCI6MjA5MzU1NjYzN30.x93K-iB62GO15FDq1onwyX0zIuhhbCnEpBFm8eg9qfs';
+        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  // Formatter Rupiah
-  const formatRupiah = (number) => {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number || 0);
-  };
+        // State Global
+        let currentRawData =[];
+        let filterEmployeeName = "";
+        
+        // Asumsi Rate Gaji (Bisa disesuaikan atau diambil dari tabel settings)
+        const RATE_POKOK = 150000; // per poin
+        const RATE_LEMBUR = 30000; // per poin
+        const POTONGAN_BPJS = 50000;
 
-  // ================= NAVIGASI =================
-  const pageMap = {
-    'dashboard': 'page-dashboard',
-    'absensi': 'page-absensi',
-    'karyawan': 'page-karyawan',
-    'detail-karyawan': 'page-karyawan',
-    'payroll': 'page-payroll',
-    'pengaturan': 'page-pengaturan'
-  };
+        // UI Helpers
+        const showLoading = () => document.getElementById('loading').classList.remove('hidden');
+        const hideLoading = () => document.getElementById('loading').classList.add('hidden');
+        const formatRupiah = (angka) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
+        const formatHariTanggal = (dateStr) => {
+            const date = new Date(dateStr);
+            return new Intl.DateTimeFormat('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).format(date);
+        };
 
-  const navMap = { 'detail-karyawan': 'karyawan' };
+        // Switch Menu Logic (Exposed to Window object for HTML onclick attributes)
+        window.switchMenu = (menu) => {
+            document.getElementById('view-dashboard').classList.add('hidden-view');
+            document.getElementById('view-absensi').classList.add('hidden-view');
+            document.getElementById('view-payroll').classList.add('hidden-view');
+            
+            document.getElementById('btn-dashboard').className = 'w-full flex items-center px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors';
+            document.getElementById('btn-absensi').className = 'w-full flex items-center px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors';
+            document.getElementById('btn-payroll').className = 'w-full flex items-center px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors';
 
-  function navigate(target) {
-    const pageId = pageMap[target];
-    if (!pageId) return;
+            document.getElementById(`view-${menu}`).classList.remove('hidden-view');
+            document.getElementById(`btn-${menu}`).className = 'w-full flex items-center px-4 py-3 bg-primary rounded-lg transition-colors';
 
-    // Sembunyikan semua page
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    
-    // Tampilkan page target dengan animasi
-    const page = document.getElementById(pageId);
-    page.classList.add('active');
-    page.classList.remove('page-transition');
-    void page.offsetWidth; // Reflow
-    page.classList.add('page-transition');
+            const titles = { 'dashboard': 'Dashboard', 'absensi': 'Data Absensi', 'payroll': 'Kelola Payroll' };
+            document.getElementById('page-title').innerText = titles[menu];
 
-    // Update Sidebar Navigation aktif
-    document.querySelectorAll('.nav-item').forEach(item => {
-      item.classList.remove('active');
-      if (item.dataset.nav === (navMap[target] || target)) {
-        item.classList.add('active');
-      }
-    });
+            if(menu === 'absensi' && currentRawData.length === 0) setDefaultDates();
+            if(menu === 'payroll') renderPayroll();
+        };
 
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Kalkulasi Poin Absensi
+        // Aturan: Waktu kerja 9 jam = 1 Poin Pokok. Sisanya = Poin Lembur
+        const hitungPoin = (clockIn, clockOut) => {
+            if(!clockIn || !clockOut) return { pokok: 0, lembur: 0 };
+            
+            const timeIn = new Date(`2000-01-01T${clockIn}`);
+            const timeOut = new Date(`2000-01-01T${clockOut}`);
+            let diffMs = timeOut - timeIn;
+            
+            if(diffMs < 0) diffMs += 24 * 60 * 60 * 1000; // Handle jika lewat tengah malam
+            
+            const diffHours = diffMs / (1000 * 60 * 60);
+            
+            let pokok = 0;
+            let lembur = 0;
 
-    // Panggil fetch data otomatis saat menu di klik
-    if (target === 'absensi') loadAttendance();
-    if (target === 'payroll') loadPayroll();
-    if (target === 'pengaturan') loadSettings();
-  }
+            if(diffHours >= 9) {
+                pokok = 1;
+                lembur = parseFloat((diffHours - 9).toFixed(1));
+            } else {
+                // Jika kurang dari 9 jam, tidak dapat poin 1, hitung proporsional (opsional) atau 0
+                // Berdasarkan prompt: "jika selisihnya 9 jam maka mendapat poin satu".
+                pokok = parseFloat((diffHours / 9).toFixed(2));
+            }
 
-  // Event Delegation untuk navigasi (Mendukung elemen yg dirender via JS)
-  document.addEventListener('click', (e) => {
-    const navEl = e.target.closest('[data-nav]');
-    if (navEl) {
-      navigate(navEl.dataset.nav);
-    }
-  });
+            return { pokok, lembur };
+        };
 
-  // ================= FUNGSI FETCH SUPABASE =================
+        // Set Default Dates (Awal bulan s/d hari ini)
+        const setDefaultDates = () => {
+            const today = new Date();
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            document.getElementById('filter-end').value = today.toISOString().split('T')[0];
+            
+            // Format firstDay (YYYY-MM-DD)
+            const yyyy = firstDay.getFullYear();
+            const mm = String(firstDay.getMonth() + 1).padStart(2, '0');
+            const dd = String(firstDay.getDate()).padStart(2, '0');
+            document.getElementById('filter-start').value = `${yyyy}-${mm}-${dd}`;
+            
+            fetchAbsensi();
+        };
 
-  // Fetch Data Absensi
-  async function loadAttendance() {
-    const tbody = document.getElementById('table-absensi-body');
-    if (!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-gray-500">Memuat data dari database...</td></tr>';
+        // Fetch Data dari Supabase
+        window.fetchAbsensi = async () => {
+            showLoading();
+            const start = document.getElementById('filter-start').value;
+            const end = document.getElementById('filter-end').value;
 
-    const { data, error } = await supabase
-      .from('attendance')
-      .select(`*, employees(name)`)
-      .order('date', { ascending: false });
+            try {
+                // Join tabel attendance dan employees
+                let query = supabase
+                    .from('attendance')
+                    .select(`
+                        id, date, clock_in, clock_out,
+                        employees ( id, name, base_salary )
+                    `)
+                    .order('date', { ascending: false });
 
-    if (error) {
-      console.error(error);
-      tbody.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-red-500 font-bold">Gagal memuat data. Periksa Kunci Supabase Anda.</td></tr>';
-      return;
-    }
+                if (start) query = query.gte('date', start);
+                if (end) query = query.lte('date', end);
 
-    tbody.innerHTML = '';
-    if (data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-gray-500">Belum ada data kehadiran.</td></tr>';
-        return;
-    }
+                const { data, error } = await query;
+                
+                if (error) throw error;
+                currentRawData = data;
+                
+                // Update Dashboard Stat
+                document.getElementById('dash-total-att').innerText = data.length;
+                
+                renderAbsensi();
+            } catch (err) {
+                console.error("Error fetching data:", err);
+                alert("Gagal mengambil data dari Supabase.");
+            } finally {
+                hideLoading();
+            }
+        };
 
-    data.forEach(row => {
-      const tr = document.createElement('tr');
-      tr.className = 'hover:bg-gray-50 transition-colors border-b border-gray-100';
-      
-      let statusStyle = 'bg-green-50 text-green-700';
-      if(row.status.toLowerCase() === 'terlambat') statusStyle = 'bg-orange-50 text-orange-700';
-      if(row.status.toLowerCase() === 'absen') {
-        statusStyle = 'bg-red-100 text-red-700';
-        tr.classList.add('bg-red-50/30');
-      }
+        // Fetch Total Employees for Dashboard
+        const fetchDashboardData = async () => {
+            const { count } = await supabase.from('employees').select('*', { count: 'exact', head: true });
+            document.getElementById('dash-total-emp').innerText = count || 0;
+        };
 
-      tr.innerHTML = `
-        <td class="px-lg py-4 whitespace-nowrap">${row.date}</td>
-        <td class="px-lg py-4 whitespace-nowrap font-semibold text-primary cursor-pointer hover:underline" data-nav="karyawan">${row.employees ? row.employees.name : 'Unknown'}</td>
-        <td class="px-lg py-4 whitespace-nowrap font-mono text-gray-600">${row.clock_in ? row.clock_in.substring(0,5) : '—'}</td>
-        <td class="px-lg py-4 whitespace-nowrap font-mono text-gray-600">${row.clock_out ? row.clock_out.substring(0,5) : '—'}</td>
-        <td class="px-lg py-4"><span class="${statusStyle} px-3 py-1 rounded-full text-xs font-bold uppercase">${row.status}</span></td>
-        <td class="px-lg py-4 text-center font-medium">${row.base_points}</td>
-        <td class="px-lg py-4 text-center font-medium ${row.overtime_points > 0 ? 'text-primary' : 'text-gray-400'}">${row.overtime_points}</td>
-      `;
-      tbody.appendChild(tr);
-    });
-  }
+        // Render Tabel Absensi
+        window.renderAbsensi = () => {
+            const tbody = document.getElementById('table-absensi');
+            tbody.innerHTML = '';
 
-  // Fetch Data Payroll
-  async function loadPayroll() {
-    const tbody = document.getElementById('table-payroll-body');
-    if (!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-gray-500">Memuat data dari database...</td></tr>';
+            // Terapkan Filter Nama Jika Ada
+            const filteredData = filterEmployeeName 
+                ? currentRawData.filter(item => item.employees?.name === filterEmployeeName)
+                : currentRawData;
 
-    const { data, error } = await supabase
-      .from('payroll')
-      .select(`*, employees(name, position)`);
+            if(filteredData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center p-8 text-gray-500">Tidak ada data absensi pada rentang tanggal ini.</td></tr>`;
+                return;
+            }
 
-    if (error) {
-      console.error(error);
-      tbody.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-red-500 font-bold">Gagal memuat data. Periksa Kunci Supabase Anda.</td></tr>';
-      return;
-    }
+            filteredData.forEach(row => {
+                const poin = hitungPoin(row.clock_in, row.clock_out);
+                const empName = row.employees?.name || 'Unknown';
+                
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50 transition";
+                tr.innerHTML = `
+                    <td class="p-4 text-gray-800 font-medium">${formatHariTanggal(row.date)}</td>
+                    <td class="p-4">
+                        <span onclick="setFilterName('${empName}')" class="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-semibold">
+                            ${empName}
+                        </span>
+                    </td>
+                    <td class="p-4 text-center">
+                        <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">${row.clock_in ? row.clock_in.substring(0,5) : '-'}</span>
+                    </td>
+                    <td class="p-4 text-center">
+                        <span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold">${row.clock_out ? row.clock_out.substring(0,5) : '-'}</span>
+                    </td>
+                    <td class="p-4 text-center font-bold text-gray-700">${poin.pokok}</td>
+                    <td class="p-4 text-center font-bold text-orange-500">${poin.lembur}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        };
 
-    tbody.innerHTML = '';
-    if (data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-gray-500">Belum ada data penggajian.</td></tr>';
-        return;
-    }
+        // Filter by Click Name
+        window.setFilterName = (name) => {
+            filterEmployeeName = name;
+            document.getElementById('filter-name').value = name;
+            document.getElementById('btn-clear-name').classList.remove('hidden');
+            renderAbsensi();
+        };
 
-    data.forEach(row => {
-      const tr = document.createElement('tr');
-      tr.className = 'hover:bg-gray-50 transition-colors';
-      const name = row.employees ? row.employees.name : 'Unknown';
-      const pos = row.employees ? row.employees.position : '-';
-      const initials = name.split(' ').map(n => n[0]).join('').substring(0,2);
-      
-      let badgeColor = row.status.toLowerCase() === 'selesai' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700';
+        window.clearNameFilter = () => {
+            filterEmployeeName = "";
+            document.getElementById('filter-name').value = "";
+            document.getElementById('btn-clear-name').classList.add('hidden');
+            renderAbsensi();
+        };
 
-      tr.innerHTML = `
-        <td class="px-lg py-4">
-          <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-800 flex items-center justify-center font-bold text-xs">${initials}</div>
-            <div><p class="font-semibold text-gray-800">${name}</p><p class="text-xs text-gray-500">${pos}</p></div>
-          </div>
-        </td>
-        <td class="px-lg py-4 text-right font-mono text-gray-600">${formatRupiah(row.base_salary)}</td>
-        <td class="px-lg py-4 text-right font-mono text-green-600">${formatRupiah(row.bonus_salary)}</td>
-        <td class="px-lg py-4 text-center font-mono text-red-500">${formatRupiah(row.bpjs_deduction)}</td>
-        <td class="px-lg py-4 text-right font-bold text-gray-800">${formatRupiah(row.total_salary)}</td>
-        <td class="px-lg py-4 text-center"><span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase ${badgeColor}">${row.status}</span></td>
-      `;
-      tbody.appendChild(tr);
-    });
-  }
+        // Rekap & Render Payroll
+        window.renderPayroll = () => {
+            const tbody = document.getElementById('table-payroll');
+            tbody.innerHTML = '';
 
-  // Fetch Pengaturan
-  async function loadSettings() {
-    const { data, error } = await supabase.from('settings').select('*').single();
-    if (error || !data) return console.error('Gagal memuat pengaturan:', error);
-    
-    if(document.getElementById('input-base-rate')) document.getElementById('input-base-rate').value = data.base_point_rate;
-    if(document.getElementById('input-overtime-rate')) document.getElementById('input-overtime-rate').value = data.overtime_point_rate;
-    if(document.getElementById('input-bpjs-rate')) document.getElementById('input-bpjs-rate').value = data.bpjs_employee_rate;
-  }
+            // Grouping data berdasarkan Employee
+            const recap = {};
+            currentRawData.forEach(row => {
+                const empId = row.employees?.id;
+                if(!empId) return;
 
-  // Save Pengaturan ke Supabase
-  const saveBtn = document.getElementById('btn-save-settings');
-  if (saveBtn) {
-    saveBtn.addEventListener('click', async () => {
-      saveBtn.innerText = "Menyimpan...";
-      
-      const base = document.getElementById('input-base-rate').value;
-      const overtime = document.getElementById('input-overtime-rate').value;
-      const bpjs = document.getElementById('input-bpjs-rate').value;
+                if(!recap[empId]) {
+                    recap[empId] = {
+                        name: row.employees.name,
+                        base_salary_db: row.employees.base_salary,
+                        total_pokok: 0,
+                        total_lembur: 0,
+                        bonus: 0 // Default 0, bisa diatur manual
+                    };
+                }
 
-      const { error } = await supabase
-        .from('settings')
-        .update({ base_point_rate: base, overtime_point_rate: overtime, bpjs_employee_rate: bpjs })
-        .eq('id', 1);
+                const poin = hitungPoin(row.clock_in, row.clock_out);
+                recap[empId].total_pokok += poin.pokok;
+                recap[empId].total_lembur += poin.lembur;
+            });
 
-      if (error) {
-        alert("Gagal menyimpan pengaturan! " + error.message);
-      } else {
-        alert("Pengaturan berhasil disimpan ke Database!");
-      }
-      saveBtn.innerText = "Simpan Perubahan";
-    });
-  }
+            const empIds = Object.keys(recap);
+            if(empIds.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center p-8 text-gray-500">Silahkan filter data absensi terlebih dahulu.</td></tr>`;
+                return;
+            }
 
-  // Panggil dashboard pada awal muat
-  navigate('dashboard');
-</script>
+            empIds.forEach(id => {
+                const data = recap[id];
+                
+                // Kalkulasi Gaji
+                const gajiPokok = data.total_pokok * RATE_POKOK;
+                const gajiLembur = data.total_lembur * RATE_LEMBUR;
+                const bonus = data.bonus;
+                const totalKotor = gajiPokok + gajiLembur + bonus;
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50 transition";
+                
+                // Buat unique ID untuk total gaji agar bisa diupdate real-time oleh toggle BPJS
+                const totalGajiId = `total-gaji-${id}`;
+
+                tr.innerHTML = `
+                    <td class="p-4 font-semibold text-gray-800">${data.name}</td>
+                    <td class="p-4 text-center">
+                        <span title="Pokok" class="text-blue-600 font-bold">${data.total_pokok.toFixed(1)}</span> / 
+                        <span title="Lembur" class="text-orange-500 font-bold">${data.total_lembur.toFixed(1)}</span> / 
+                        <span title="Bonus" class="text-green-500 font-bold">0</span>
+                    </td>
+                    <td class="p-4 text-right">${formatRupiah(gajiPokok)}</td>
+                    <td class="p-4 text-right">${formatRupiah(gajiLembur)}</td>
+                    <td class="p-4 text-right">${formatRupiah(bonus)}</td>
+                    <td class="p-4 text-center">
+                        <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                            <input type="checkbox" name="toggle" id="bpjs-${id}" 
+                                onchange="toggleBPJS('${id}', ${totalKotor})"
+                                class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 transition-all"/>
+                            <label for="bpjs-${id}" class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-300 cursor-pointer"></label>
+                        </div>
+                    </td>
+                    <td class="p-4 text-right font-bold text-primary text-lg" id="${totalGajiId}">
+                        ${formatRupiah(totalKotor)}
+                    </td>
+                    <td class="p-4 text-center">
+                        <button class="text-gray-500 hover:text-primary transition"><i class="fa-solid fa-pen-to-square"></i> Edit</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        };
+
+        // Fungsi Handle Toggle BPJS Real-Time
+        window.toggleBPJS = (empId, totalKotor) => {
+            const isChecked = document.getElementById(`bpjs-${empId}`).checked;
+            const elementTotal = document.getElementById(`total-gaji-${empId}`);
+            
+            const totalAkhir = isChecked ? totalKotor - POTONGAN_BPJS : totalKotor;
+            elementTotal.innerText = formatRupiah(totalAkhir);
+            
+            if(isChecked) {
+                elementTotal.classList.remove('text-primary');
+                elementTotal.classList.add('text-red-500'); // Indikator warna potong
+            } else {
+                elementTotal.classList.remove('text-red-500');
+                elementTotal.classList.add('text-primary');
+            }
+        };
+
+        // Initialize App
+        window.onload = () => {
+            fetchDashboardData();
+        };
+
+    </script>
 </body>
 </html>
