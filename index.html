@@ -3,464 +3,583 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SUHARNO2 Absen & Payroll System</title>
-    <!-- Tailwind CSS untuk Styling -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome untuk Icon -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts -->
+    <title>Absensi Suharno 2</title>
+    <!-- Fonts: Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Flatpickr (Calendar Date Range) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Inter', 'sans-serif'] },
-                    colors: { primary: '#4f46e5', secondary: '#1e293b' }
-                }
-            }
-        }
-    </script>
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
-        .hidden-view { display: none; }
-        /* Toggle Switch CSS */
-        .toggle-checkbox:checked { right: 0; border-color: #68D391; }
-        .toggle-checkbox:checked + .toggle-label { background-color: #68D391; }
+        :root {
+            --primary: #297c3f; /* Hijau */
+            --accent: #f4e918; /* Kuning */
+            --danger: #e90023; /* Merah */
+            --white: #ffffff;
+            --bg-body: #f4f7f6;
+            --text-dark: #1f2937;
+            --text-muted: #6b7280;
+            --border-color: #e5e7eb;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg-body); color: var(--text-dark); display: flex; height: 100vh; overflow: hidden; }
+
+        /* Sidebar */
+        .sidebar { width: 260px; background-color: var(--primary); color: var(--white); display: flex; flex-direction: column; transition: all 0.3s; }
+        .sidebar-header { padding: 24px; font-size: 20px; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 10px; }
+        .sidebar-header i { color: var(--accent); }
+        .nav-menu { list-style: none; padding: 20px 0; flex: 1; }
+        .nav-item { padding: 14px 24px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: 0.2s; font-weight: 500; }
+        .nav-item:hover, .nav-item.active { background-color: rgba(255, 255, 255, 0.1); border-left: 4px solid var(--accent); color: var(--accent); }
+
+        /* Main Content */
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
+        .topbar { background-color: var(--white); height: 70px; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; box-shadow: var(--shadow-sm); z-index: 10; }
+        .page-title { font-size: 20px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+        .user-profile { display: flex; align-items: center; gap: 10px; font-weight: 500; }
+        .content-body { padding: 32px; flex: 1; }
+
+        /* Cards & Silicon Valley Style */
+        .card { background-color: var(--white); border-radius: 12px; box-shadow: var(--shadow-md); padding: 24px; margin-bottom: 24px; border: 1px solid var(--border-color); }
+        .card-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--text-dark); }
+
+        /* Dashboard Stats */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px; margin-bottom: 24px; }
+        .stat-card { background-color: var(--white); padding: 24px; border-radius: 12px; box-shadow: var(--shadow-md); display: flex; align-items: center; gap: 16px; border-left: 5px solid var(--primary); }
+        .stat-icon { width: 48px; height: 48px; border-radius: 50%; background-color: rgba(41, 124, 63, 0.1); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        .stat-info h4 { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+        .stat-info p { font-size: 24px; font-weight: 700; margin-top: 4px; }
+
+        /* Tables */
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { background-color: #f9fafb; color: var(--text-muted); font-size: 12px; text-transform: uppercase; padding: 12px 16px; border-bottom: 1px solid var(--border-color); font-weight: 600; }
+        td { padding: 16px; border-bottom: 1px solid var(--border-color); font-size: 14px; color: var(--text-dark); }
+        tr:hover td { background-color: #f9fafb; }
+        .clickable-name { color: var(--primary); font-weight: 600; cursor: pointer; }
+        .clickable-name:hover { text-decoration: underline; }
+
+        /* Buttons & Inputs */
+        .btn { padding: 10px 16px; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; border: none; transition: 0.2s; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-primary { background-color: var(--primary); color: var(--white); }
+        .btn-primary:hover { background-color: #1e5a2e; }
+        .btn-accent { background-color: var(--accent); color: var(--text-dark); }
+        .btn-accent:hover { background-color: #d4ca15; }
+        .btn-danger { background-color: var(--danger); color: var(--white); }
+        .filter-bar { display: flex; gap: 16px; margin-bottom: 20px; align-items: center; }
+        .input-control { padding: 10px 16px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; outline: none; width: 250px; background-color: var(--white); }
+        .input-control:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(41, 124, 63, 0.1); }
+        .badge { padding: 4px 8px; border-radius: 99px; font-size: 12px; font-weight: 500; }
+        .badge-active { background-color: #dcfce7; color: #166534; }
+        .badge-inactive { background-color: #fee2e2; color: #991b1b; }
+        .summary-box { display: flex; gap: 24px; margin-bottom: 20px; background: rgba(41, 124, 63, 0.05); padding: 16px; border-radius: 8px; border-left: 4px solid var(--primary); }
+
+        /* Modal */
+        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center; }
+        .modal-content { background: var(--white); padding: 32px; border-radius: 12px; width: 400px; box-shadow: var(--shadow-md); }
+        .modal-header { font-size: 18px; font-weight: 600; margin-bottom: 20px; display: flex; justify-content: space-between; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted); }
+        .form-group input { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; }
+
+        /* Utilities */
+        .hidden { display: none !important; }
+        .text-center { text-align: center; }
+        #loading-indicator { font-size: 12px; background-color: var(--accent); padding: 4px 10px; border-radius: 20px; display: none; }
     </style>
 </head>
-<body class="flex h-screen overflow-hidden">
+<body>
 
     <!-- Sidebar -->
-    <aside class="w-64 bg-secondary text-white flex flex-col shadow-xl">
-        <div class="h-16 flex items-center justify-center border-b border-gray-700">
-            <h1 class="text-2xl font-bold tracking-wider"><i class="fa-solid fa-fingerprint text-blue-400 mr-2"></i> SUHARNO2<span class="text-blue-400">Pro</span></h1>
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <i class="fa-solid fa-fingerprint"></i>
+            <span>Suharno 2</span>
         </div>
-        <nav class="flex-1 px-4 py-6 space-y-2">
-            <button onclick="switchMenu('dashboard')" id="btn-dashboard" class="w-full flex items-center px-4 py-3 bg-primary rounded-lg transition-colors">
-                <i class="fa-solid fa-chart-pie w-6"></i> Dashboard
-            </button>
-            <button onclick="switchMenu('absensi')" id="btn-absensi" class="w-full flex items-center px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors">
-                <i class="fa-solid fa-calendar-check w-6"></i> Absensi
-            </button>
-            <button onclick="switchMenu('payroll')" id="btn-payroll" class="w-full flex items-center px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors">
-                <i class="fa-solid fa-file-invoice-dollar w-6"></i> Payroll
-            </button>
-        </nav>
-        <div class="p-4 border-t border-gray-700 text-sm text-gray-400 text-center">
-            &copy; 2026 SUHARNO2 System
-        </div>
-    </aside>
+        <ul class="nav-menu">
+            <li class="nav-item active" onclick="switchPage('dashboard')"><i class="fa-solid fa-chart-pie"></i> Dashboard</li>
+            <li class="nav-item" onclick="switchPage('karyawan')"><i class="fa-solid fa-users"></i> Data Karyawan</li>
+            <li class="nav-item" onclick="switchPage('absensi')"><i class="fa-solid fa-calendar-check"></i> Absensi</li>
+            <li class="nav-item" onclick="switchPage('payroll')"><i class="fa-solid fa-file-invoice-dollar"></i> Payroll</li>
+        </ul>
+    </nav>
 
     <!-- Main Content -->
-    <main class="flex-1 flex flex-col overflow-hidden relative">
-        <!-- Header -->
-        <header class="h-16 bg-white shadow-sm flex items-center justify-between px-8 z-10">
-            <h2 id="page-title" class="text-xl font-semibold text-gray-800">Dashboard</h2>
-            <div class="flex items-center space-x-4">
-                <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">A</div>
-                <span class="text-sm font-medium text-gray-700">Admin HR</span>
+    <main class="main-content">
+        <div class="topbar">
+            <div class="page-title" id="topbar-title">
+                Dashboard 
+                <span id="loading-indicator"><i class="fa-solid fa-spinner fa-spin"></i> Sinkronisasi...</span>
             </div>
-        </header>
+            <div class="user-profile">
+                <span>Admin HRD</span>
+                <i class="fa-solid fa-circle-user" style="font-size: 24px; color: var(--primary);"></i>
+            </div>
+        </div>
 
-        <!-- Content Area -->
-        <div class="flex-1 overflow-auto p-8 relative">
+        <div class="content-body">
             
-            <!-- Loading Overlay -->
-            <div id="loading" class="absolute inset-0 bg-white bg-opacity-75 z-50 flex flex-col items-center justify-center hidden">
-                <i class="fa-solid fa-spinner fa-spin text-4xl text-primary mb-4"></i>
-                <p class="text-gray-600 font-medium">Memuat Data Supabase...</p>
-            </div>
-
-            <!-- DASHBOARD VIEW -->
-            <div id="view-dashboard" class="space-y-6">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-4">
-                        <div class="p-3 bg-blue-100 text-blue-600 rounded-lg text-2xl"><i class="fa-solid fa-users"></i></div>
-                        <div>
-                            <p class="text-sm text-gray-500 font-medium">Total Karyawan</p>
-                            <h3 id="dash-total-emp" class="text-2xl font-bold text-gray-800">-</h3>
-                        </div>
+            <!-- PAGE: DASHBOARD -->
+            <div id="page-dashboard">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
+                        <div class="stat-info"><h4>Total Karyawan</h4><p id="dash-total-emp">0</p></div>
                     </div>
-                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-4">
-                        <div class="p-3 bg-green-100 text-green-600 rounded-lg text-2xl"><i class="fa-solid fa-check-double"></i></div>
-                        <div>
-                            <p class="text-sm text-gray-500 font-medium">Absensi Tercatat</p>
-                            <h3 id="dash-total-att" class="text-2xl font-bold text-gray-800">-</h3>
-                        </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="color: var(--accent); background: rgba(244, 233, 24, 0.2);"><i class="fa-solid fa-user-check"></i></div>
+                        <div class="stat-info"><h4>Absen Masuk (Bulan Ini)</h4><p id="dash-hadir-today">0</p></div>
                     </div>
-                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-4">
-                        <div class="p-3 bg-purple-100 text-purple-600 rounded-lg text-2xl"><i class="fa-solid fa-wallet"></i></div>
-                        <div>
-                            <p class="text-sm text-gray-500 font-medium">Status Payroll</p>
-                            <h3 class="text-lg font-bold text-gray-800">Menunggu Review</h3>
-                        </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="color: var(--primary); background: rgba(41, 124, 63, 0.1);"><i class="fa-solid fa-coins"></i></div>
+                        <div class="stat-info"><h4>Total Poin Ekstra Terdata</h4><p id="dash-total-lembur">0</p></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="color: var(--danger); background: rgba(233, 0, 35, 0.1);"><i class="fa-solid fa-money-bill-wave"></i></div>
+                        <div class="stat-info"><h4>Estimasi Payroll Terdata</h4><p id="dash-est-payroll">Rp 0</p></div>
                     </div>
                 </div>
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <h4 class="text-lg font-semibold mb-4 text-gray-700">Selamat Datang di Sistem SUHARNO2</h4>
-                    <p class="text-gray-600">Sistem ini terintegrasi dengan mesin absensi sidik jari. Gunakan menu di sebelah kiri untuk mengelola data kehadiran dan melihat rekapitulasi gaji karyawan.</p>
+
+                <div class="card">
+                    <h3 class="card-title">Aktivitas Absensi Terbaru</h3>
+                    <div class="table-container">
+                        <table id="table-dashboard-recent">
+                            <thead><tr><th>Karyawan</th><th>Waktu Masuk</th><th>Status</th></tr></thead>
+                            <tbody><tr><td colspan="3" class="text-center">Mengambil data dari server...</td></tr></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
-            <!-- ABSENSI VIEW -->
-            <div id="view-absensi" class="hidden-view space-y-6">
-                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-wrap items-end gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Mulai Tanggal</label>
-                        <input type="date" id="filter-start" class="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary outline-none text-sm">
+            <!-- PAGE: KARYAWAN -->
+            <div id="page-karyawan" class="hidden">
+                <div class="card">
+                    <h3 class="card-title">Daftar Karyawan</h3>
+                    <div class="table-container">
+                        <table id="table-karyawan">
+                            <thead><tr><th>Tgl Input</th><th>Nama Karyawan</th><th>Jabatan</th><th>Umur</th><th>Status BPJS</th><th>Gaji Pokok (Per Poin)</th><th>Status Aktif</th></tr></thead>
+                            <tbody><tr><td colspan="7" class="text-center">Mengambil data...</td></tr></tbody>
+                        </table>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Sampai Tanggal</label>
-                        <input type="date" id="filter-end" class="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary outline-none text-sm">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Filter Karyawan</label>
-                        <input type="text" id="filter-name" placeholder="Semua Karyawan..." class="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary outline-none text-sm bg-gray-50" readonly>
-                        <button onclick="clearNameFilter()" class="ml-2 text-sm text-red-500 hover:underline hidden" id="btn-clear-name">Clear</button>
-                    </div>
-                    <button onclick="fetchAbsensi()" class="bg-primary hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition text-sm">
-                        <i class="fa-solid fa-filter mr-1"></i> Filter
-                    </button>
-                </div>
-
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-gray-50 border-b border-gray-200 text-gray-600 text-sm">
-                                <th class="p-4 font-semibold">Hari, Tanggal</th>
-                                <th class="p-4 font-semibold">Nama Karyawan</th>
-                                <th class="p-4 font-semibold text-center">Jam Masuk</th>
-                                <th class="p-4 font-semibold text-center">Jam Keluar</th>
-                                <th class="p-4 font-semibold text-center">Poin Pokok</th>
-                                <th class="p-4 font-semibold text-center">Poin Lembur</th>
-                            </tr>
-                        </thead>
-                        <tbody id="table-absensi" class="text-sm divide-y divide-gray-100">
-                            <!-- Data Absensi Injected Here -->
-                        </tbody>
-                    </table>
                 </div>
             </div>
 
-            <!-- PAYROLL VIEW -->
-            <div id="view-payroll" class="hidden-view space-y-6">
-                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-md">
-                    <p class="text-sm text-yellow-700">
-                        <i class="fa-solid fa-circle-info mr-1"></i>
-                        Data Payroll di bawah dihitung berdasarkan rentang tanggal absensi terakhir yang difilter. Toggle BPJS akan langsung memotong Rp 50.000 dari Total Gaji.
-                    </p>
-                </div>
+            <!-- PAGE: ABSENSI -->
+            <div id="page-absensi" class="hidden">
+                <div class="card">
+                    <div class="filter-bar">
+                        <input type="text" id="date-range-absensi" class="input-control" placeholder="Pilih Range Tanggal...">
+                        <button class="btn btn-primary" onclick="filterAbsensi()"><i class="fa-solid fa-filter"></i> Filter</button>
+                        <button class="btn btn-accent" onclick="resetFilterAbsensi()" id="btn-reset-absensi" style="display:none;"><i class="fa-solid fa-rotate-left"></i> Reset Filter Nama</button>
+                    </div>
 
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden overflow-x-auto">
-                    <table class="w-full text-left border-collapse min-w-[1000px]">
-                        <thead>
-                            <tr class="bg-gray-50 border-b border-gray-200 text-gray-600 text-xs uppercase tracking-wide">
-                                <th class="p-4 font-semibold">Nama</th>
-                                <th class="p-4 font-semibold text-center">Poin (P/E/B)</th>
-                                <th class="p-4 font-semibold text-right">Gaji Pokok</th>
-                                <th class="p-4 font-semibold text-right">Gaji Ekstra</th>
-                                <th class="p-4 font-semibold text-right">Bonus</th>
-                                <th class="p-4 font-semibold text-center">BPJS (50k)</th>
-                                <th class="p-4 font-semibold text-right text-primary">Total Gaji</th>
-                                <th class="p-4 font-semibold text-center">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="table-payroll" class="text-sm divide-y divide-gray-100">
-                            <!-- Data Payroll Injected Here -->
-                        </tbody>
-                    </table>
+                    <div class="summary-box">
+                        <div><strong>Total Poin Pokok:</strong> <span id="abs-tot-pokok">0</span></div>
+                        <div><strong>Total Poin Ekstra (Lembur):</strong> <span id="abs-tot-ekstra">0</span></div>
+                        <div id="abs-filter-info" style="color:var(--danger); font-weight:bold;"></div>
+                    </div>
+
+                    <div class="table-container">
+                        <table id="table-absensi">
+                            <thead><tr><th>Hari, Tanggal</th><th>Nama</th><th>Jam Masuk</th><th>Jam Keluar</th><th>Tipe Hari</th><th>Poin Pokok</th><th>Poin Ekstra</th></tr></thead>
+                            <tbody><tr><td colspan="7" class="text-center">Terapkan filter tanggal untuk melihat data</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PAGE: PAYROLL -->
+            <div id="page-payroll" class="hidden">
+                <div class="card">
+                    <div class="filter-bar">
+                        <input type="text" id="date-range-payroll" class="input-control" placeholder="Pilih Range Tanggal...">
+                        <button class="btn btn-primary" onclick="filterPayroll()"><i class="fa-solid fa-filter"></i> Hitung Payroll</button>
+                        <button class="btn btn-accent" onclick="resetFilterPayroll()" id="btn-reset-payroll" style="display:none;"><i class="fa-solid fa-rotate-left"></i> Reset Detail</button>
+                    </div>
+
+                    <div class="table-container">
+                        <table id="table-payroll">
+                            <thead><tr><th>Nama</th><th>P. Pokok</th><th>P. Ekstra</th><th>P. Bonus</th><th>Gaji Pokok</th><th>Gaji Ekstra</th><th>Gaji Bonus</th><th>Potongan BPJS</th><th>Total Gaji</th><th>Aksi</th></tr></thead>
+                            <tbody><tr><td colspan="10" class="text-center">Terapkan filter tanggal untuk melihat data</td></tr></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
         </div>
     </main>
 
-    <!-- Supabase JS Client (ES Module) -->
-    <script type="module">
-        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+    <!-- Modal Bonus -->
+    <div id="modal-bonus" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>Input Bonus & Poin Manual</span>
+                <i class="fa-solid fa-times" style="cursor:pointer;" onclick="closeModal()"></i>
+            </div>
+            <div class="form-group">
+                <label>Nama Karyawan</label>
+                <input type="text" id="modal-emp-name" readonly style="background:#f3f4f6;">
+                <input type="hidden" id="modal-emp-id">
+            </div>
+            <div class="form-group">
+                <label>Tambahan Poin Bonus</label>
+                <input type="number" id="modal-poin-bonus" step="0.5" min="0" value="0">
+            </div>
+            <div class="form-group">
+                <label>Tambahan Gaji Bonus (Rp)</label>
+                <input type="number" id="modal-gaji-bonus" min="0" value="0">
+            </div>
+            <div style="display: flex; gap:10px; justify-content: flex-end; margin-top: 24px;">
+                <button class="btn btn-danger" onclick="closeModal()">Batal</button>
+                <button class="btn btn-primary" onclick="saveBonus()" id="btn-save-bonus">Simpan Data</button>
+            </div>
+        </div>
+    </div>
 
-        // Konfigurasi Supabase
-        const SUPABASE_URL = 'https://ezuqjvcvrajhutijzggs.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV6dXFqdmN2cmFqaHV0aWp6Z2dzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5ODA2MzcsImV4cCI6MjA5MzU1NjYzN30.x93K-iB62GO15FDq1onwyX0zIuhhbCnEpBFm8eg9qfs';
-        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script>
+        // KONEKSI SUPABASE
+        const { createClient } = supabase;
+        const supabaseUrl = 'https://ezuqjvcvrajhutijzggs.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV6dXFqdmN2cmFqaHV0aWp6Z2dzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5ODA2MzcsImV4cCI6MjA5MzU1NjYzN30.x93K-iB62GO15FDq1onwyX0zIuhhbCnEpBFm8eg9qfs';
+        const supabaseApp = createClient(supabaseUrl, supabaseKey);
 
-        // State Global
-        let currentRawData =[];
-        let filterEmployeeName = "";
+        // Format Rupiah
+        const formatRp = (angka) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
+
+        // GLOBAL STATE / DATA STORAGE
+        let db_karyawan =[];
+        let db_absensi =[];
+        let db_bonus = {}; 
         
-        // Asumsi Rate Gaji (Bisa disesuaikan atau diambil dari tabel settings)
-        const RATE_POKOK = 150000; // per poin
-        const RATE_LEMBUR = 30000; // per poin
-        const POTONGAN_BPJS = 50000;
+        let currentAbsensiFilterName = null;
+        let currentPayrollFilterName = null;
 
-        // UI Helpers
-        const showLoading = () => document.getElementById('loading').classList.remove('hidden');
-        const hideLoading = () => document.getElementById('loading').classList.add('hidden');
-        const formatRupiah = (angka) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
-        const formatHariTanggal = (dateStr) => {
-            const date = new Date(dateStr);
-            return new Intl.DateTimeFormat('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).format(date);
-        };
+        // Default: Awal bulan s/d hari ini
+        let today = new Date();
+        let firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+        let todayStr = today.toISOString().split('T')[0];
+        
+        let dateRangeAbsensi = { start: firstDay, end: todayStr };
+        let dateRangePayroll = { start: firstDay, end: todayStr };
 
-        // Switch Menu Logic (Exposed to Window object for HTML onclick attributes)
-        window.switchMenu = (menu) => {
-            document.getElementById('view-dashboard').classList.add('hidden-view');
-            document.getElementById('view-absensi').classList.add('hidden-view');
-            document.getElementById('view-payroll').classList.add('hidden-view');
+        document.addEventListener('DOMContentLoaded', () => {
+            // Setup Calendar Inputs
+            flatpickr("#date-range-absensi", { mode: "range", dateFormat: "Y-m-d", defaultDate:[firstDay, todayStr] });
+            flatpickr("#date-range-payroll", { mode: "range", dateFormat: "Y-m-d", defaultDate:[firstDay, todayStr] });
+
+            // Ambil data pertama kali
+            fetchDataSupabase();
+        });
+
+        // ------------------ PULL DATA DARI SUPABASE ------------------
+        async function fetchDataSupabase() {
+            document.getElementById('loading-indicator').style.display = 'inline-block';
             
-            document.getElementById('btn-dashboard').className = 'w-full flex items-center px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors';
-            document.getElementById('btn-absensi').className = 'w-full flex items-center px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors';
-            document.getElementById('btn-payroll').className = 'w-full flex items-center px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors';
-
-            document.getElementById(`view-${menu}`).classList.remove('hidden-view');
-            document.getElementById(`btn-${menu}`).className = 'w-full flex items-center px-4 py-3 bg-primary rounded-lg transition-colors';
-
-            const titles = { 'dashboard': 'Dashboard', 'absensi': 'Data Absensi', 'payroll': 'Kelola Payroll' };
-            document.getElementById('page-title').innerText = titles[menu];
-
-            if(menu === 'absensi' && currentRawData.length === 0) setDefaultDates();
-            if(menu === 'payroll') renderPayroll();
-        };
-
-        // Kalkulasi Poin Absensi
-        // Aturan: Waktu kerja 9 jam = 1 Poin Pokok. Sisanya = Poin Lembur
-        const hitungPoin = (clockIn, clockOut) => {
-            if(!clockIn || !clockOut) return { pokok: 0, lembur: 0 };
-            
-            const timeIn = new Date(`2000-01-01T${clockIn}`);
-            const timeOut = new Date(`2000-01-01T${clockOut}`);
-            let diffMs = timeOut - timeIn;
-            
-            if(diffMs < 0) diffMs += 24 * 60 * 60 * 1000; // Handle jika lewat tengah malam
-            
-            const diffHours = diffMs / (1000 * 60 * 60);
-            
-            let pokok = 0;
-            let lembur = 0;
-
-            if(diffHours >= 9) {
-                pokok = 1;
-                lembur = parseFloat((diffHours - 9).toFixed(1));
-            } else {
-                // Jika kurang dari 9 jam, tidak dapat poin 1, hitung proporsional (opsional) atau 0
-                // Berdasarkan prompt: "jika selisihnya 9 jam maka mendapat poin satu".
-                pokok = parseFloat((diffHours / 9).toFixed(2));
-            }
-
-            return { pokok, lembur };
-        };
-
-        // Set Default Dates (Awal bulan s/d hari ini)
-        const setDefaultDates = () => {
-            const today = new Date();
-            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-            document.getElementById('filter-end').value = today.toISOString().split('T')[0];
-            
-            // Format firstDay (YYYY-MM-DD)
-            const yyyy = firstDay.getFullYear();
-            const mm = String(firstDay.getMonth() + 1).padStart(2, '0');
-            const dd = String(firstDay.getDate()).padStart(2, '0');
-            document.getElementById('filter-start').value = `${yyyy}-${mm}-${dd}`;
-            
-            fetchAbsensi();
-        };
-
-        // Fetch Data dari Supabase
-        window.fetchAbsensi = async () => {
-            showLoading();
-            const start = document.getElementById('filter-start').value;
-            const end = document.getElementById('filter-end').value;
-
             try {
-                // Join tabel attendance dan employees
-                let query = supabase
-                    .from('attendance')
-                    .select(`
-                        id, date, clock_in, clock_out,
-                        employees ( id, name, base_salary )
-                    `)
-                    .order('date', { ascending: false });
+                // Fetch Karyawan
+                let { data: karyawan } = await supabaseApp.from('karyawan').select('*');
+                if(karyawan) db_karyawan = karyawan;
 
-                if (start) query = query.gte('date', start);
-                if (end) query = query.lte('date', end);
+                // Fetch Absensi
+                let { data: absensi } = await supabaseApp.from('absensi').select('*');
+                if(absensi) db_absensi = absensi;
 
-                const { data, error } = await query;
-                
-                if (error) throw error;
-                currentRawData = data;
-                
-                // Update Dashboard Stat
-                document.getElementById('dash-total-att').innerText = data.length;
-                
-                renderAbsensi();
-            } catch (err) {
-                console.error("Error fetching data:", err);
-                alert("Gagal mengambil data dari Supabase.");
-            } finally {
-                hideLoading();
-            }
-        };
-
-        // Fetch Total Employees for Dashboard
-        const fetchDashboardData = async () => {
-            const { count } = await supabase.from('employees').select('*', { count: 'exact', head: true });
-            document.getElementById('dash-total-emp').innerText = count || 0;
-        };
-
-        // Render Tabel Absensi
-        window.renderAbsensi = () => {
-            const tbody = document.getElementById('table-absensi');
-            tbody.innerHTML = '';
-
-            // Terapkan Filter Nama Jika Ada
-            const filteredData = filterEmployeeName 
-                ? currentRawData.filter(item => item.employees?.name === filterEmployeeName)
-                : currentRawData;
-
-            if(filteredData.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center p-8 text-gray-500">Tidak ada data absensi pada rentang tanggal ini.</td></tr>`;
-                return;
-            }
-
-            filteredData.forEach(row => {
-                const poin = hitungPoin(row.clock_in, row.clock_out);
-                const empName = row.employees?.name || 'Unknown';
-                
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-gray-50 transition";
-                tr.innerHTML = `
-                    <td class="p-4 text-gray-800 font-medium">${formatHariTanggal(row.date)}</td>
-                    <td class="p-4">
-                        <span onclick="setFilterName('${empName}')" class="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-semibold">
-                            ${empName}
-                        </span>
-                    </td>
-                    <td class="p-4 text-center">
-                        <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">${row.clock_in ? row.clock_in.substring(0,5) : '-'}</span>
-                    </td>
-                    <td class="p-4 text-center">
-                        <span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold">${row.clock_out ? row.clock_out.substring(0,5) : '-'}</span>
-                    </td>
-                    <td class="p-4 text-center font-bold text-gray-700">${poin.pokok}</td>
-                    <td class="p-4 text-center font-bold text-orange-500">${poin.lembur}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-        };
-
-        // Filter by Click Name
-        window.setFilterName = (name) => {
-            filterEmployeeName = name;
-            document.getElementById('filter-name').value = name;
-            document.getElementById('btn-clear-name').classList.remove('hidden');
-            renderAbsensi();
-        };
-
-        window.clearNameFilter = () => {
-            filterEmployeeName = "";
-            document.getElementById('filter-name').value = "";
-            document.getElementById('btn-clear-name').classList.add('hidden');
-            renderAbsensi();
-        };
-
-        // Rekap & Render Payroll
-        window.renderPayroll = () => {
-            const tbody = document.getElementById('table-payroll');
-            tbody.innerHTML = '';
-
-            // Grouping data berdasarkan Employee
-            const recap = {};
-            currentRawData.forEach(row => {
-                const empId = row.employees?.id;
-                if(!empId) return;
-
-                if(!recap[empId]) {
-                    recap[empId] = {
-                        name: row.employees.name,
-                        base_salary_db: row.employees.base_salary,
-                        total_pokok: 0,
-                        total_lembur: 0,
-                        bonus: 0 // Default 0, bisa diatur manual
-                    };
+                // Fetch Bonus
+                let { data: bonus } = await supabaseApp.from('bonus').select('*');
+                if(bonus) {
+                    db_bonus = {};
+                    bonus.forEach(b => {
+                        db_bonus[b.emp_id_period] = { poin: b.poin, nominal: b.nominal };
+                    });
                 }
 
-                const poin = hitungPoin(row.clock_in, row.clock_out);
-                recap[empId].total_pokok += poin.pokok;
-                recap[empId].total_lembur += poin.lembur;
-            });
+                // Render UI jika data berhasil ditarik
+                renderDashboard();
+                renderKaryawan();
+                renderAbsensi();
+                renderPayroll();
 
-            const empIds = Object.keys(recap);
-            if(empIds.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="text-center p-8 text-gray-500">Silahkan filter data absensi terlebih dahulu.</td></tr>`;
+            } catch(error) {
+                console.error("Gagal terhubung ke Supabase:", error);
+                alert("Gagal menarik data dari server. Pastikan tabel di Supabase sudah dibuat sesuai format!");
+            } finally {
+                document.getElementById('loading-indicator').style.display = 'none';
+            }
+        }
+
+        // --- FUNGSI BISNIS: HITUNG POIN ---
+        function hitungPoin(jamMasuk, jamKeluar, isWeekend) {
+            if(!jamMasuk || !jamKeluar) return { pokok: 0, ekstra: 0 };
+            
+            let inT = new Date(`2000-01-01T${jamMasuk}`);
+            let outT = new Date(`2000-01-01T${jamKeluar}`);
+            let hours = (outT - inT) / (1000 * 60 * 60);
+            
+            let poinPokok = 0; let poinEkstra = 0;
+
+            if (isWeekend) {
+                if (hours >= 12.5) { poinPokok = 2; poinEkstra = hours - 12.5; } 
+                else { poinPokok = (hours / 12.5) * 2; }
+            } else {
+                if (hours >= 9) { poinPokok = 1; poinEkstra = hours - 9; } 
+                else { poinPokok = hours / 9; }
+            }
+            return { pokok: Math.round(poinPokok * 100) / 100, ekstra: Math.round(poinEkstra * 100) / 100 };
+        }
+
+        // --- RENDER DASHBOARD ---
+        function renderDashboard() {
+            document.getElementById('dash-total-emp').innerText = db_karyawan.length;
+            
+            // Absensi Bulan Ini (Sesuai daterange defaut)
+            let abThisMonth = db_absensi.filter(a => a.date >= firstDay && a.date <= todayStr);
+            document.getElementById('dash-hadir-today').innerText = abThisMonth.length;
+
+            let totEkstra = 0; let estPayroll = 0;
+            db_absensi.forEach(ab => {
+                let p = hitungPoin(ab.clock_in, ab.clock_out, ab.is_weekend);
+                totEkstra += p.ekstra;
+
+                let emp = db_karyawan.find(k => k.id == ab.emp_id);
+                if(emp) estPayroll += (p.pokok * emp.gaji_per_poin_pokok) + (p.ekstra * emp.gaji_per_poin_ekstra);
+            });
+            document.getElementById('dash-total-lembur').innerText = totEkstra.toFixed(1);
+            document.getElementById('dash-est-payroll').innerText = formatRp(estPayroll);
+
+            let tbody = document.querySelector('#table-dashboard-recent tbody');
+            tbody.innerHTML = '';
+            
+            if(db_absensi.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" class="text-center">Belum ada data absensi</td></tr>`;
+            } else {
+                let recentData = [...db_absensi].sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+                recentData.forEach(ab => {
+                    let emp = db_karyawan.find(k => k.id == ab.emp_id);
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${emp ? emp.name : 'ID: '+ab.emp_id}</td>
+                            <td>${ab.date} ${ab.clock_in}</td>
+                            <td><span class="badge badge-active">Terekam</span></td>
+                        </tr>
+                    `;
+                });
+            }
+        }
+
+        // --- RENDER KARYAWAN ---
+        function renderKaryawan() {
+            let tbody = document.querySelector('#table-karyawan tbody');
+            tbody.innerHTML = '';
+
+            if(db_karyawan.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center">Data karyawan masih kosong</td></tr>`;
                 return;
             }
 
-            empIds.forEach(id => {
-                const data = recap[id];
-                
-                // Kalkulasi Gaji
-                const gajiPokok = data.total_pokok * RATE_POKOK;
-                const gajiLembur = data.total_lembur * RATE_LEMBUR;
-                const bonus = data.bonus;
-                const totalKotor = gajiPokok + gajiLembur + bonus;
-
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-gray-50 transition";
-                
-                // Buat unique ID untuk total gaji agar bisa diupdate real-time oleh toggle BPJS
-                const totalGajiId = `total-gaji-${id}`;
-
-                tr.innerHTML = `
-                    <td class="p-4 font-semibold text-gray-800">${data.name}</td>
-                    <td class="p-4 text-center">
-                        <span title="Pokok" class="text-blue-600 font-bold">${data.total_pokok.toFixed(1)}</span> / 
-                        <span title="Lembur" class="text-orange-500 font-bold">${data.total_lembur.toFixed(1)}</span> / 
-                        <span title="Bonus" class="text-green-500 font-bold">0</span>
-                    </td>
-                    <td class="p-4 text-right">${formatRupiah(gajiPokok)}</td>
-                    <td class="p-4 text-right">${formatRupiah(gajiLembur)}</td>
-                    <td class="p-4 text-right">${formatRupiah(bonus)}</td>
-                    <td class="p-4 text-center">
-                        <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
-                            <input type="checkbox" name="toggle" id="bpjs-${id}" 
-                                onchange="toggleBPJS('${id}', ${totalKotor})"
-                                class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 transition-all"/>
-                            <label for="bpjs-${id}" class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-300 cursor-pointer"></label>
-                        </div>
-                    </td>
-                    <td class="p-4 text-right font-bold text-primary text-lg" id="${totalGajiId}">
-                        ${formatRupiah(totalKotor)}
-                    </td>
-                    <td class="p-4 text-center">
-                        <button class="text-gray-500 hover:text-primary transition"><i class="fa-solid fa-pen-to-square"></i> Edit</button>
-                    </td>
+            db_karyawan.forEach(emp => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${emp.created_at || '-'}</td>
+                        <td><strong>${emp.name}</strong></td>
+                        <td>${emp.jabatan}</td>
+                        <td>${emp.umur}</td>
+                        <td><span class="badge ${emp.status_bpjs === 'Aktif' ? 'badge-active' : 'badge-inactive'}">${emp.status_bpjs}</span></td>
+                        <td>${formatRp(emp.gaji_per_poin_pokok)}</td>
+                        <td><span class="badge ${emp.is_active ? 'badge-active' : 'badge-inactive'}">${emp.is_active ? 'Aktif' : 'Non-Aktif'}</span></td>
+                    </tr>
                 `;
-                tbody.appendChild(tr);
             });
-        };
+        }
 
-        // Fungsi Handle Toggle BPJS Real-Time
-        window.toggleBPJS = (empId, totalKotor) => {
-            const isChecked = document.getElementById(`bpjs-${empId}`).checked;
-            const elementTotal = document.getElementById(`total-gaji-${empId}`);
-            
-            const totalAkhir = isChecked ? totalKotor - POTONGAN_BPJS : totalKotor;
-            elementTotal.innerText = formatRupiah(totalAkhir);
-            
-            if(isChecked) {
-                elementTotal.classList.remove('text-primary');
-                elementTotal.classList.add('text-red-500'); // Indikator warna potong
-            } else {
-                elementTotal.classList.remove('text-red-500');
-                elementTotal.classList.add('text-primary');
+        // --- RENDER ABSENSI ---
+        function filterAbsensi() {
+            let range = document.getElementById('date-range-absensi').value.split(" to ");
+            if (range.length > 0 && range[0] !== "") {
+                dateRangeAbsensi.start = range[0];
+                dateRangeAbsensi.end = range[1] || range[0];
             }
-        };
+            renderAbsensi();
+        }
 
-        // Initialize App
-        window.onload = () => {
-            fetchDashboardData();
-        };
+        function clickNameAbsensi(name) { currentAbsensiFilterName = name; document.getElementById('btn-reset-absensi').style.display = 'inline-flex'; renderAbsensi(); }
+        function resetFilterAbsensi() { currentAbsensiFilterName = null; document.getElementById('btn-reset-absensi').style.display = 'none'; renderAbsensi(); }
+
+        function renderAbsensi() {
+            let tbody = document.querySelector('#table-absensi tbody');
+            tbody.innerHTML = '';
+            let totPokok = 0; let totEkstra = 0;
+
+            let filtered = db_absensi.filter(ab => {
+                let emp = db_karyawan.find(k => k.id == ab.emp_id);
+                let passName = currentAbsensiFilterName && emp ? emp.name === currentAbsensiFilterName : true;
+                let passDate = ab.date >= dateRangeAbsensi.start && ab.date <= dateRangeAbsensi.end;
+                return passName && passDate;
+            });
+
+            if(filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center">Tidak ada absensi pada periode ini</td></tr>`;
+            } else {
+                filtered.sort((a,b) => new Date(a.date) - new Date(b.date));
+                filtered.forEach(ab => {
+                    let emp = db_karyawan.find(k => k.id == ab.emp_id);
+                    let p = hitungPoin(ab.clock_in, ab.clock_out, ab.is_weekend);
+                    totPokok += p.pokok; totEkstra += p.ekstra;
+
+                    let dayName = new Date(ab.date).toLocaleDateString('id-ID', { weekday: 'long' });
+                    let eName = emp ? emp.name : 'Unknown ID: '+ab.emp_id;
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${dayName}, ${ab.date}</td>
+                            <td class="clickable-name" onclick="clickNameAbsensi('${eName}')">${eName}</td>
+                            <td>${ab.clock_in || '-'}</td>
+                            <td>${ab.clock_out || '-'}</td>
+                            <td>${ab.is_weekend ? '<span class="badge badge-inactive">Weekend</span>' : '<span class="badge badge-active">Weekday</span>'}</td>
+                            <td>${p.pokok}</td>
+                            <td>${p.ekstra}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            document.getElementById('abs-tot-pokok').innerText = totPokok.toFixed(2);
+            document.getElementById('abs-tot-ekstra').innerText = totEkstra.toFixed(2);
+            document.getElementById('abs-filter-info').innerText = currentAbsensiFilterName ? `Filter Karyawan: ${currentAbsensiFilterName}` : '';
+        }
+
+        // --- RENDER PAYROLL ---
+        function filterPayroll() {
+            let range = document.getElementById('date-range-payroll').value.split(" to ");
+            if (range.length > 0 && range[0] !== "") {
+                dateRangePayroll.start = range[0];
+                dateRangePayroll.end = range[1] || range[0];
+            }
+            renderPayroll();
+        }
+
+        function clickNamePayroll(name) { currentPayrollFilterName = name; document.getElementById('btn-reset-payroll').style.display = 'inline-flex'; renderPayroll(); }
+        function resetFilterPayroll() { currentPayrollFilterName = null; document.getElementById('btn-reset-payroll').style.display = 'none'; renderPayroll(); }
+
+        function renderPayroll() {
+            let tbody = document.querySelector('#table-payroll tbody');
+            tbody.innerHTML = '';
+
+            let payrollData = {};
+            db_karyawan.forEach(emp => { payrollData[emp.id] = { emp: emp, totPokok: 0, totEkstra: 0 }; });
+
+            let filteredAbsensi = db_absensi.filter(ab => ab.date >= dateRangePayroll.start && ab.date <= dateRangePayroll.end);
+            filteredAbsensi.forEach(ab => {
+                if(payrollData[ab.emp_id]) {
+                    let p = hitungPoin(ab.clock_in, ab.clock_out, ab.is_weekend);
+                    payrollData[ab.emp_id].totPokok += p.pokok;
+                    payrollData[ab.emp_id].totEkstra += p.ekstra;
+                }
+            });
+
+            let empList = Object.values(payrollData);
+            if(currentPayrollFilterName) empList = empList.filter(d => d.emp.name === currentPayrollFilterName);
+
+            let hasData = false;
+            empList.forEach(data => {
+                if(data.totPokok === 0 && !currentPayrollFilterName) return;
+                hasData = true;
+
+                let e = data.emp;
+                let bonusKey = `${e.id}_${dateRangePayroll.start}`;
+                let b = db_bonus[bonusKey] || { poin: 0, nominal: 0 };
+
+                let pPokok = data.totPokok; let pEkstra = data.totEkstra; let pBonus = b.poin;
+                let gPokok = pPokok * e.gaji_per_poin_pokok;
+                let gEkstra = pEkstra * e.gaji_per_poin_ekstra;
+                let gBonus = b.nominal;
+                
+                let potBpjs = e.status_bpjs === 'Aktif' ? 50000 : 0;
+                let totGaji = gPokok + gEkstra + gBonus - potBpjs;
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="clickable-name" onclick="clickNamePayroll('${e.name}')">${e.name}</td>
+                        <td>${pPokok.toFixed(2)}</td>
+                        <td>${pEkstra.toFixed(2)}</td>
+                        <td>${pBonus.toFixed(2)}</td>
+                        <td>${formatRp(gPokok)}</td>
+                        <td>${formatRp(gEkstra)}</td>
+                        <td>${formatRp(gBonus)}</td>
+                        <td style="color:var(--danger)">${formatRp(potBpjs)}</td>
+                        <td><strong>${formatRp(totGaji)}</strong></td>
+                        <td>
+                            <button class="btn btn-accent" style="padding:6px 12px; font-size:12px;" onclick="openBonusModal(${e.id}, '${e.name}')">
+                                <i class="fa-solid fa-pen"></i> Edit
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            if(!hasData) tbody.innerHTML = `<tr><td colspan="10" class="text-center">Data absensi / payroll kosong untuk periode ini</td></tr>`;
+        }
+
+        // --- SIMPAN & UPDATE BONUS KE SUPABASE ---
+        let currentEditEmpId = null;
+
+        function openBonusModal(empId, empName) {
+            currentEditEmpId = empId;
+            document.getElementById('modal-emp-name').value = empName;
+            
+            let bonusKey = `${empId}_${dateRangePayroll.start}`;
+            let b = db_bonus[bonusKey] || { poin: 0, nominal: 0 };
+            
+            document.getElementById('modal-poin-bonus').value = b.poin;
+            document.getElementById('modal-gaji-bonus').value = b.nominal;
+            document.getElementById('modal-bonus').style.display = 'flex';
+        }
+
+        function closeModal() { document.getElementById('modal-bonus').style.display = 'none'; currentEditEmpId = null; }
+
+        async function saveBonus() {
+            if(!currentEditEmpId) return;
+            const btn = document.getElementById('btn-save-bonus');
+            btn.innerText = "Menyimpan..."; btn.disabled = true;
+
+            let bonusKey = `${currentEditEmpId}_${dateRangePayroll.start}`;
+            let pBonus = parseFloat(document.getElementById('modal-poin-bonus').value) || 0;
+            let gBonus = parseFloat(document.getElementById('modal-gaji-bonus').value) || 0;
+
+            // Update ke Supabase
+            const { error } = await supabaseApp
+                .from('bonus')
+                .upsert([ { emp_id_period: bonusKey, poin: pBonus, nominal: gBonus } ]);
+
+            if (error) {
+                alert("Gagal menyimpan ke Supabase: " + error.message);
+            } else {
+                // Update Local State
+                db_bonus[bonusKey] = { poin: pBonus, nominal: gBonus };
+                renderPayroll();
+                closeModal();
+            }
+
+            btn.innerText = "Simpan Data"; btn.disabled = false;
+        }
+
+        // Tab Switcher
+        function switchPage(pageId) {
+            document.querySelectorAll('.page-content, div[id^="page-"]').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(`page-${pageId}`).classList.remove('hidden');
+            event.currentTarget.classList.add('active');
+
+            const titles = { 'dashboard': 'Dashboard', 'karyawan': 'Data Karyawan', 'absensi': 'Manajemen Absensi', 'payroll': 'Perhitungan Payroll' };
+            document.getElementById('topbar-title').innerHTML = titles[pageId] + ' <span id="loading-indicator" style="display:none;"><i class="fa-solid fa-spinner fa-spin"></i> Sinkronisasi...</span>';
+        }
 
     </script>
 </body>
