@@ -82,11 +82,12 @@
 
         /* Modal */
         .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center; }
-        .modal-content { background: var(--white); padding: 32px; border-radius: 12px; width: 400px; box-shadow: var(--shadow-md); }
+        .modal-content { background: var(--white); padding: 32px; border-radius: 12px; width: 400px; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-md); }
         .modal-header { font-size: 18px; font-weight: 600; margin-bottom: 20px; display: flex; justify-content: space-between; }
         .form-group { margin-bottom: 16px; }
-        .form-group label { display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted); }
-        .form-group input { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; }
+        .form-group label { display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted); font-weight: 500; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; outline: none; background: var(--white); font-family: inherit; }
+        .form-group input:focus, .form-group select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(41, 124, 63, 0.1); }
 
         /* Utilities */
         .hidden { display: none !important; }
@@ -160,11 +161,15 @@
             <!-- PAGE: KARYAWAN -->
             <div id="page-karyawan" class="hidden">
                 <div class="card">
-                    <h3 class="card-title">Daftar Karyawan</h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h3 class="card-title" style="margin-bottom: 0;">Daftar Karyawan</h3>
+                        <button class="btn btn-primary" onclick="openKaryawanModal()"><i class="fa-solid fa-user-plus"></i> Tambah Karyawan</button>
+                    </div>
+                    
                     <div class="table-container">
                         <table id="table-karyawan">
-                            <thead><tr><th>Tgl Input</th><th>Nama Karyawan</th><th>Jabatan</th><th>Umur</th><th>Status BPJS</th><th>Gaji Pokok (Per Poin)</th><th>Status Aktif</th></tr></thead>
-                            <tbody><tr><td colspan="7" class="text-center">Mengambil data...</td></tr></tbody>
+                            <thead><tr><th>ID (Mesin)</th><th>Tgl Input</th><th>Nama Karyawan</th><th>Jabatan</th><th>Umur</th><th>Status BPJS</th><th>Gaji Pokok (Per Poin)</th><th>Status Aktif</th></tr></thead>
+                            <tbody><tr><td colspan="8" class="text-center">Mengambil data...</td></tr></tbody>
                         </table>
                     </div>
                 </div>
@@ -215,7 +220,7 @@
         </div>
     </main>
 
-    <!-- Modal Bonus -->
+    <!-- Modal Bonus (Existing) -->
     <div id="modal-bonus" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -238,6 +243,56 @@
             <div style="display: flex; gap:10px; justify-content: flex-end; margin-top: 24px;">
                 <button class="btn btn-danger" onclick="closeModal()">Batal</button>
                 <button class="btn btn-primary" onclick="saveBonus()" id="btn-save-bonus">Simpan Data</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Tambah Karyawan (Baru) -->
+    <div id="modal-karyawan" class="modal">
+        <div class="modal-content" style="width: 450px;">
+            <div class="modal-header">
+                <span>Tambah Data Karyawan</span>
+                <i class="fa-solid fa-times" style="cursor:pointer;" onclick="closeKaryawanModal()"></i>
+            </div>
+            <div class="form-group">
+                <label>Nama Karyawan</label>
+                <input type="text" id="new-emp-name" placeholder="Masukkan nama lengkap">
+            </div>
+            <div class="form-group">
+                <label>Jabatan</label>
+                <input type="text" id="new-emp-jabatan" placeholder="Contoh: Staff Gudang">
+            </div>
+            <div style="display: flex; gap: 16px;">
+                <div class="form-group" style="flex: 1;">
+                    <label>Umur</label>
+                    <input type="number" id="new-emp-umur" placeholder="Umur" min="17">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label>Status BPJS</label>
+                    <select id="new-emp-bpjs">
+                        <option value="Aktif">Aktif</option>
+                        <option value="Tidak Aktif">Tidak Aktif</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Gaji Pokok (Per Poin Pokok) - Rp</label>
+                <input type="number" id="new-emp-gaji-pokok" placeholder="Contoh: 100000" min="0">
+            </div>
+            <div class="form-group">
+                <label>Gaji Ekstra (Per Poin Ekstra/Lembur) - Rp</label>
+                <input type="number" id="new-emp-gaji-ekstra" placeholder="Contoh: 25000" min="0">
+            </div>
+            <div class="form-group">
+                <label>Status Aktif</label>
+                <select id="new-emp-status">
+                    <option value="true">Karyawan Aktif</option>
+                    <option value="false">Non-Aktif / Resign</option>
+                </select>
+            </div>
+            <div style="display: flex; gap:10px; justify-content: flex-end; margin-top: 24px;">
+                <button class="btn btn-danger" onclick="closeKaryawanModal()">Batal</button>
+                <button class="btn btn-primary" onclick="saveKaryawan()" id="btn-save-karyawan">Buat Karyawan</button>
             </div>
         </div>
     </div>
@@ -284,8 +339,8 @@
             document.getElementById('loading-indicator').style.display = 'inline-block';
             
             try {
-                // Fetch Karyawan
-                let { data: karyawan } = await supabaseApp.from('karyawan').select('*');
+                // Fetch Karyawan (Diurutkan berdasarkan ID supaya rapi)
+                let { data: karyawan } = await supabaseApp.from('karyawan').select('*').order('id', { ascending: true });
                 if(karyawan) db_karyawan = karyawan;
 
                 // Fetch Absensi
@@ -380,15 +435,16 @@
             tbody.innerHTML = '';
 
             if(db_karyawan.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="text-center">Data karyawan masih kosong</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center">Data karyawan masih kosong</td></tr>`;
                 return;
             }
 
             db_karyawan.forEach(emp => {
                 tbody.innerHTML += `
                     <tr>
+                        <td><strong>${emp.id}</strong></td> <!-- Tampilkan ID biar mudah diinput ke mesin -->
                         <td>${emp.created_at || '-'}</td>
-                        <td><strong>${emp.name}</strong></td>
+                        <td style="color:var(--primary); font-weight:600;">${emp.name}</td>
                         <td>${emp.jabatan}</td>
                         <td>${emp.umur}</td>
                         <td><span class="badge ${emp.status_bpjs === 'Aktif' ? 'badge-active' : 'badge-inactive'}">${emp.status_bpjs}</span></td>
@@ -527,7 +583,81 @@
             if(!hasData) tbody.innerHTML = `<tr><td colspan="10" class="text-center">Data absensi / payroll kosong untuk periode ini</td></tr>`;
         }
 
-        // --- SIMPAN & UPDATE BONUS KE SUPABASE ---
+        // --- LOGIKA MODAL TAMBAH KARYAWAN ---
+        function openKaryawanModal() {
+            // Bersihkan form
+            document.getElementById('new-emp-name').value = '';
+            document.getElementById('new-emp-jabatan').value = '';
+            document.getElementById('new-emp-umur').value = '';
+            document.getElementById('new-emp-bpjs').value = 'Aktif';
+            document.getElementById('new-emp-gaji-pokok').value = '';
+            document.getElementById('new-emp-gaji-ekstra').value = '';
+            document.getElementById('new-emp-status').value = 'true';
+            
+            document.getElementById('modal-karyawan').style.display = 'flex';
+        }
+
+        function closeKaryawanModal() {
+            document.getElementById('modal-karyawan').style.display = 'none';
+        }
+
+        async function saveKaryawan() {
+            const btn = document.getElementById('btn-save-karyawan');
+            
+            const name = document.getElementById('new-emp-name').value.trim();
+            const jabatan = document.getElementById('new-emp-jabatan').value.trim();
+            const umur = parseInt(document.getElementById('new-emp-umur').value) || 0;
+            const bpjs = document.getElementById('new-emp-bpjs').value;
+            const gaji_pokok = parseInt(document.getElementById('new-emp-gaji-pokok').value) || 0;
+            const gaji_ekstra = parseInt(document.getElementById('new-emp-gaji-ekstra').value) || 0;
+            const is_active = document.getElementById('new-emp-status').value === 'true';
+
+            // Validasi Data Kosong
+            if(!name || !jabatan || gaji_pokok <= 0) {
+                alert("Mohon isi Nama, Jabatan, dan Gaji Pokok dengan benar!");
+                return;
+            }
+
+            btn.innerText = "Menyimpan...";
+            btn.disabled = true;
+
+            const newKaryawanData = {
+                name: name,
+                jabatan: jabatan,
+                umur: umur,
+                status_bpjs: bpjs,
+                gaji_per_poin_pokok: gaji_pokok,
+                gaji_per_poin_ekstra: gaji_ekstra,
+                is_active: is_active
+            };
+
+            // Simpan ke Supabase Database
+            const { data, error } = await supabaseApp
+                .from('karyawan')
+                .insert([newKaryawanData])
+                .select(); // Gunakan select() agar data yang baru terbuat beserta ID-nya dikembalikan
+
+            if (error) {
+                alert("Gagal menambahkan karyawan: " + error.message);
+            } else {
+                if (data && data.length > 0) {
+                    db_karyawan.push(data[0]); // Tambahkan langsung ke memori lokal browser
+                } else {
+                    await fetchDataSupabase(); // Fallback jika respon kosong, tarik ulang semua data
+                }
+                
+                // Update tampilan tabel dan tutup modal
+                renderKaryawan();
+                renderDashboard();
+                closeKaryawanModal();
+                alert(`Karyawan atas nama ${name} berhasil ditambahkan! \n\nPastikan Anda mendaftarkan karyawan ini di mesin Fingerspot menggunakan ID (Nomor PIN): ${data[0].id}`);
+            }
+
+            btn.innerText = "Buat Karyawan";
+            btn.disabled = false;
+        }
+
+        // --- LOGIKA MODAL BONUS ---
         let currentEditEmpId = null;
 
         function openBonusModal(empId, empName) {
@@ -553,7 +683,6 @@
             let pBonus = parseFloat(document.getElementById('modal-poin-bonus').value) || 0;
             let gBonus = parseFloat(document.getElementById('modal-gaji-bonus').value) || 0;
 
-            // Update ke Supabase
             const { error } = await supabaseApp
                 .from('bonus')
                 .upsert([ { emp_id_period: bonusKey, poin: pBonus, nominal: gBonus } ]);
@@ -561,7 +690,6 @@
             if (error) {
                 alert("Gagal menyimpan ke Supabase: " + error.message);
             } else {
-                // Update Local State
                 db_bonus[bonusKey] = { poin: pBonus, nominal: gBonus };
                 renderPayroll();
                 closeModal();
