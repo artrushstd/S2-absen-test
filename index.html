@@ -30,6 +30,18 @@
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
         body { background-color: var(--bg-body); color: var(--text-dark); display: flex; height: 100vh; overflow: hidden; }
 
+        /* App Wrapper */
+        #app-wrapper { width: 100%; height: 100%; display: flex; }
+
+        /* Login Screen */
+        #login-screen { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background-color: var(--primary); }
+        .login-card { background: var(--white); padding: 40px; border-radius: 12px; box-shadow: var(--shadow-md); width: 380px; text-align: center; }
+        .login-card h2 { margin-bottom: 8px; color: var(--text-dark); }
+        .login-card p { color: var(--text-muted); font-size: 14px; margin-bottom: 32px; }
+        .login-card .form-group { text-align: left; margin-bottom: 20px; }
+        .login-card .btn { width: 100%; justify-content: center; font-size: 15px; padding: 12px; margin-top: 10px;}
+        #login-error { color: var(--danger); font-size: 13px; margin-top: -10px; margin-bottom: 15px; display: none; text-align: left; font-weight: 500;}
+
         /* Sidebar */
         .sidebar { width: 260px; background-color: var(--primary); color: var(--white); display: flex; flex-direction: column; transition: all 0.3s; }
         .sidebar-header { padding: 24px; font-size: 20px; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 10px; }
@@ -43,6 +55,8 @@
         .topbar { background-color: var(--white); height: 70px; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; box-shadow: var(--shadow-sm); z-index: 10; }
         .page-title { font-size: 20px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
         .user-profile { display: flex; align-items: center; gap: 10px; font-weight: 500; }
+        .logout-btn { color: var(--danger); cursor: pointer; margin-left: 10px; font-size: 18px; transition: 0.2s; }
+        .logout-btn:hover { color: #b9001b; }
         .content-body { padding: 32px; flex: 1; }
 
         /* Cards & Silicon Valley Style */
@@ -98,135 +112,163 @@
 </head>
 <body>
 
-    <!-- Sidebar -->
-    <nav class="sidebar">
-        <div class="sidebar-header">
-            <i class="fa-solid fa-fingerprint"></i>
-            <span>Suharno 2</span>
-        </div>
-        <ul class="nav-menu">
-            <li class="nav-item active" onclick="switchPage('dashboard')"><i class="fa-solid fa-chart-pie"></i> Dashboard</li>
-            <li class="nav-item" onclick="switchPage('karyawan')"><i class="fa-solid fa-users"></i> Data Karyawan</li>
-            <li class="nav-item" onclick="switchPage('absensi')"><i class="fa-solid fa-calendar-check"></i> Absensi</li>
-            <li class="nav-item" onclick="switchPage('payroll')"><i class="fa-solid fa-file-invoice-dollar"></i> Payroll</li>
-        </ul>
-    </nav>
-
-    <!-- Main Content -->
-    <main class="main-content">
-        <div class="topbar">
-            <div class="page-title" id="topbar-title">
-                Dashboard 
-                <span id="loading-indicator"><i class="fa-solid fa-spinner fa-spin"></i> Sinkronisasi...</span>
+    <!-- PAGE: LOGIN SCREEN -->
+    <div id="login-screen" class="hidden">
+        <div class="login-card">
+            <div style="font-size: 40px; color: var(--primary); margin-bottom: 10px;">
+                <i class="fa-solid fa-fingerprint"></i>
             </div>
-            <div class="user-profile">
-                <span>Admin HRD</span>
-                <i class="fa-solid fa-circle-user" style="font-size: 24px; color: var(--primary);"></i>
-            </div>
-        </div>
-
-        <div class="content-body">
+            <h2>Sistem Absensi</h2>
+            <p>Suharno 2 Employee Portal</p>
             
-            <!-- PAGE: DASHBOARD -->
-            <div id="page-dashboard">
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
-                        <div class="stat-info"><h4>Total Karyawan</h4><p id="dash-total-emp">0</p></div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon" style="color: var(--accent); background: rgba(244, 233, 24, 0.2);"><i class="fa-solid fa-user-check"></i></div>
-                        <div class="stat-info"><h4>Absen Masuk (Bulan Ini)</h4><p id="dash-hadir-today">0</p></div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon" style="color: var(--primary); background: rgba(41, 124, 63, 0.1);"><i class="fa-solid fa-coins"></i></div>
-                        <div class="stat-info"><h4>Total Poin Ekstra Terdata</h4><p id="dash-total-lembur">0</p></div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon" style="color: var(--danger); background: rgba(233, 0, 35, 0.1);"><i class="fa-solid fa-money-bill-wave"></i></div>
-                        <div class="stat-info"><h4>Estimasi Payroll Terdata</h4><p id="dash-est-payroll">Rp 0</p></div>
-                    </div>
+            <form id="form-login" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label>ID / Username</label>
+                    <input type="text" id="login-id" placeholder="Masukkan ID (Bebas)" autocomplete="off">
                 </div>
+                <div class="form-group">
+                    <label>Password / Kode Akses</label>
+                    <input type="password" id="login-password" placeholder="Masukkan Password" required>
+                </div>
+                <div id="login-error">Password yang Anda masukkan salah.</div>
+                <button type="submit" class="btn btn-primary">Masuk ke Sistem</button>
+            </form>
+        </div>
+    </div>
 
-                <div class="card">
-                    <h3 class="card-title">Aktivitas Absensi Terbaru</h3>
-                    <div class="table-container">
-                        <table id="table-dashboard-recent">
-                            <thead><tr><th>Karyawan</th><th>Waktu Masuk</th><th>Status</th></tr></thead>
-                            <tbody><tr><td colspan="3" class="text-center">Mengambil data dari server...</td></tr></tbody>
-                        </table>
-                    </div>
+    <!-- MAIN APP WRAPPER -->
+    <div id="app-wrapper" class="hidden">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <i class="fa-solid fa-fingerprint"></i>
+                <span>Suharno 2</span>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item active" onclick="switchPage('dashboard')"><i class="fa-solid fa-chart-pie"></i> Dashboard</li>
+                <li class="nav-item" onclick="switchPage('karyawan')"><i class="fa-solid fa-users"></i> Data Karyawan</li>
+                <li class="nav-item" onclick="switchPage('absensi')"><i class="fa-solid fa-calendar-check"></i> Absensi</li>
+                <li class="nav-item" onclick="switchPage('payroll')"><i class="fa-solid fa-file-invoice-dollar"></i> Payroll</li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="topbar">
+                <div class="page-title" id="topbar-title">
+                    Dashboard 
+                    <span id="loading-indicator"><i class="fa-solid fa-spinner fa-spin"></i> Sinkronisasi...</span>
+                </div>
+                <div class="user-profile">
+                    <span id="topbar-user-name">Pengguna</span>
+                    <i class="fa-solid fa-circle-user" style="font-size: 24px; color: var(--primary);"></i>
+                    <i class="fa-solid fa-right-from-bracket logout-btn" onclick="logout()" title="Keluar / Logout"></i>
                 </div>
             </div>
 
-            <!-- PAGE: KARYAWAN -->
-            <div id="page-karyawan" class="hidden">
-                <div class="card">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                        <h3 class="card-title" style="margin-bottom: 0;">Daftar Karyawan</h3>
-                        <button class="btn btn-primary" onclick="openKaryawanModal()"><i class="fa-solid fa-user-plus"></i> Tambah Karyawan</button>
-                    </div>
-                    
-                    <div class="table-container">
-                        <table id="table-karyawan">
-                            <thead><tr><th>ID (Mesin)</th><th>Tgl Input</th><th>Nama Karyawan</th><th>Jabatan</th><th>Umur</th><th>Status BPJS</th><th>Gaji Pokok (Per Poin)</th><th>Status Aktif</th><th>Aksi</th></tr></thead>
-                            <tbody><tr><td colspan="9" class="text-center">Mengambil data...</td></tr></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- PAGE: ABSENSI -->
-            <div id="page-absensi" class="hidden">
-                <div class="card">
-                    <div class="filter-bar">
-                        <input type="text" id="date-range-absensi" class="input-control" placeholder="Pilih Range Tanggal...">
-                        <button class="btn btn-primary" onclick="filterAbsensi()"><i class="fa-solid fa-filter"></i> Filter</button>
-                        <button class="btn btn-accent" onclick="resetFilterAbsensi()" id="btn-reset-absensi" style="display:none;"><i class="fa-solid fa-rotate-left"></i> Reset Filter Nama</button>
-                        
-                        <div style="margin-left: auto; display: flex; gap: 10px;">
-                            <button class="btn btn-primary" onclick="openTipeHariModal()"><i class="fa-solid fa-calendar-day"></i> Ubah Tipe Hari</button>
-                            <button class="btn btn-accent" onclick="printAbsensi()"><i class="fa-solid fa-print"></i> Print Data</button>
+            <div class="content-body">
+                
+                <!-- PAGE: DASHBOARD -->
+                <div id="page-dashboard">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
+                            <div class="stat-info"><h4>Total Karyawan</h4><p id="dash-total-emp">0</p></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon" style="color: var(--accent); background: rgba(244, 233, 24, 0.2);"><i class="fa-solid fa-user-check"></i></div>
+                            <div class="stat-info"><h4>Absen Masuk (Bulan Ini)</h4><p id="dash-hadir-today">0</p></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon" style="color: var(--primary); background: rgba(41, 124, 63, 0.1);"><i class="fa-solid fa-coins"></i></div>
+                            <div class="stat-info"><h4>Total Poin Ekstra Terdata</h4><p id="dash-total-lembur">0</p></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon" style="color: var(--danger); background: rgba(233, 0, 35, 0.1);"><i class="fa-solid fa-money-bill-wave"></i></div>
+                            <div class="stat-info"><h4>Estimasi Payroll Terdata</h4><p id="dash-est-payroll">Rp 0</p></div>
                         </div>
                     </div>
 
-                    <div class="summary-box">
-                        <div><strong>Total Poin Pokok:</strong> <span id="abs-tot-pokok">0</span></div>
-                        <div><strong>Total Poin Ekstra:</strong> <span id="abs-tot-ekstra">0</span></div>
-                        <div id="abs-filter-info" style="color:var(--danger); font-weight:bold;"></div>
-                    </div>
-
-                    <div class="table-container">
-                        <table id="table-absensi">
-                            <thead><tr><th>Hari, Tanggal</th><th>Nama</th><th>Jam Masuk</th><th>Jam Keluar</th><th>Tipe Hari</th><th>Poin Pokok</th><th>Poin Ekstra</th></tr></thead>
-                            <tbody><tr><td colspan="7" class="text-center">Terapkan filter tanggal untuk melihat data</td></tr></tbody>
-                        </table>
+                    <div class="card">
+                        <h3 class="card-title">Aktivitas Absensi Terbaru</h3>
+                        <div class="table-container">
+                            <table id="table-dashboard-recent">
+                                <thead><tr><th>Karyawan</th><th>Waktu Masuk</th><th>Status</th></tr></thead>
+                                <tbody><tr><td colspan="3" class="text-center">Mengambil data dari server...</td></tr></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- PAGE: PAYROLL -->
-            <div id="page-payroll" class="hidden">
-                <div class="card">
-                    <div class="filter-bar">
-                        <input type="text" id="date-range-payroll" class="input-control" placeholder="Pilih Range Tanggal...">
-                        <button class="btn btn-primary" onclick="filterPayroll()"><i class="fa-solid fa-filter"></i> Hitung Payroll</button>
-                        <button class="btn btn-accent" onclick="resetFilterPayroll()" id="btn-reset-payroll" style="display:none;"><i class="fa-solid fa-rotate-left"></i> Reset Detail</button>
+                <!-- PAGE: KARYAWAN -->
+                <div id="page-karyawan" class="hidden">
+                    <div class="card">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h3 class="card-title" style="margin-bottom: 0;">Daftar Karyawan</h3>
+                            <button class="btn btn-primary" onclick="openKaryawanModal()"><i class="fa-solid fa-user-plus"></i> Tambah Karyawan</button>
+                        </div>
                         
-                        <button class="btn btn-accent" style="margin-left: auto;" onclick="printPayroll()"><i class="fa-solid fa-print"></i> Print Data</button>
-                    </div>
-
-                    <div class="table-container">
-                        <table id="table-payroll">
-                            <thead><tr><th>Nama</th><th>P. Pokok</th><th>P. Ekstra</th><th>P. Bonus</th><th>Gaji Pokok</th><th>Gaji Ekstra</th><th>Gaji Bonus</th><th>Potongan BPJS</th><th>Total Gaji</th><th>Aksi</th></tr></thead>
-                            <tbody><tr><td colspan="10" class="text-center">Terapkan filter tanggal untuk melihat data</td></tr></tbody>
-                        </table>
+                        <div class="table-container">
+                            <table id="table-karyawan">
+                                <thead><tr><th>ID (Mesin)</th><th>Tgl Input</th><th>Nama Karyawan</th><th>Jabatan</th><th>Umur</th><th>Status BPJS</th><th>Gaji Pokok (Per Poin)</th><th>Status Aktif</th><th>Aksi</th></tr></thead>
+                                <tbody><tr><td colspan="9" class="text-center">Mengambil data...</td></tr></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-        </div>
-    </main>
+                <!-- PAGE: ABSENSI -->
+                <div id="page-absensi" class="hidden">
+                    <div class="card">
+                        <div class="filter-bar">
+                            <input type="text" id="date-range-absensi" class="input-control" placeholder="Pilih Range Tanggal...">
+                            <button class="btn btn-primary" onclick="filterAbsensi()"><i class="fa-solid fa-filter"></i> Filter</button>
+                            <button class="btn btn-accent" onclick="resetFilterAbsensi()" id="btn-reset-absensi" style="display:none;"><i class="fa-solid fa-rotate-left"></i> Reset Filter Nama</button>
+                            
+                            <div style="margin-left: auto; display: flex; gap: 10px;">
+                                <button class="btn btn-primary" onclick="openTipeHariModal()"><i class="fa-solid fa-calendar-day"></i> Ubah Tipe Hari</button>
+                                <button class="btn btn-accent" onclick="printAbsensi()"><i class="fa-solid fa-print"></i> Print Data</button>
+                            </div>
+                        </div>
+
+                        <div class="summary-box">
+                            <div><strong>Total Poin Pokok:</strong> <span id="abs-tot-pokok">0</span></div>
+                            <div><strong>Total Poin Ekstra:</strong> <span id="abs-tot-ekstra">0</span></div>
+                            <div id="abs-filter-info" style="color:var(--danger); font-weight:bold;"></div>
+                        </div>
+
+                        <div class="table-container">
+                            <table id="table-absensi">
+                                <thead><tr><th>Hari, Tanggal</th><th>Nama</th><th>Jam Masuk</th><th>Jam Keluar</th><th>Tipe Hari</th><th>Poin Pokok</th><th>Poin Ekstra</th></tr></thead>
+                                <tbody><tr><td colspan="7" class="text-center">Terapkan filter tanggal untuk melihat data</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PAGE: PAYROLL -->
+                <div id="page-payroll" class="hidden">
+                    <div class="card">
+                        <div class="filter-bar">
+                            <input type="text" id="date-range-payroll" class="input-control" placeholder="Pilih Range Tanggal...">
+                            <button class="btn btn-primary" onclick="filterPayroll()"><i class="fa-solid fa-filter"></i> Hitung Payroll</button>
+                            <button class="btn btn-accent" onclick="resetFilterPayroll()" id="btn-reset-payroll" style="display:none;"><i class="fa-solid fa-rotate-left"></i> Reset Detail</button>
+                            
+                            <button class="btn btn-accent" style="margin-left: auto;" onclick="printPayroll()"><i class="fa-solid fa-print"></i> Print Data</button>
+                        </div>
+
+                        <div class="table-container">
+                            <table id="table-payroll">
+                                <thead><tr><th>Nama</th><th>P. Pokok</th><th>P. Ekstra</th><th>P. Bonus</th><th>Gaji Pokok</th><th>Gaji Ekstra</th><th>Gaji Bonus</th><th>Potongan BPJS</th><th>Total Gaji</th><th>Aksi</th></tr></thead>
+                                <tbody><tr><td colspan="10" class="text-center">Terapkan filter tanggal untuk melihat data</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
 
     <!-- Modal Ubah Tipe Hari Masal -->
     <div id="modal-tipe-hari" class="modal">
@@ -305,7 +347,6 @@
                 <span id="modal-title-karyawan">Tambah Data Karyawan</span>
                 <i class="fa-solid fa-times" style="cursor:pointer;" onclick="closeKaryawanModal()"></i>
             </div>
-            <!-- Hidden input untuk menampung ID saat mode EDIT -->
             <input type="hidden" id="edit-emp-id" value="">
             
             <div class="form-group">
@@ -350,6 +391,13 @@
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script>
+        // --- DATA USER/LOGIN ---
+        const authUsers = {
+            'z008': { role: 'owner', name: 'Hendy' },
+            'mei141414': { role: 'admin', name: 'HR Mei' },
+            'fania14': { role: 'admin', name: 'Manajer Aji' }
+        };
+
         // KONEKSI SUPABASE
         const { createClient } = supabase;
         const supabaseUrl = 'https://ezuqjvcvrajhutijzggs.supabase.co';
@@ -360,7 +408,7 @@
         const formatRp = (angka) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
 
         // GLOBAL STATE / DATA STORAGE
-        let db_karyawan = [];
+        let db_karyawan =[];
         let db_absensi =[];
         let db_bonus = {}; 
         
@@ -381,9 +429,53 @@
             flatpickr("#date-range-payroll", { mode: "range", dateFormat: "Y-m-d", defaultDate:[firstDay, todayStr] });
             flatpickr("#modal-tipe-date", { dateFormat: "Y-m-d", defaultDate: todayStr });
 
-            // Ambil data pertama kali
-            fetchDataSupabase();
+            // Pengecekan status login
+            const savedUser = sessionStorage.getItem('auth_user');
+            if (savedUser) {
+                showApp(JSON.parse(savedUser));
+            } else {
+                document.getElementById('login-screen').classList.remove('hidden');
+                document.getElementById('app-wrapper').classList.add('hidden');
+            }
         });
+
+        // --- SISTEM LOGIN ---
+        function handleLogin(e) {
+            e.preventDefault();
+            const pass = document.getElementById('login-password').value;
+            const err = document.getElementById('login-error');
+            
+            // Verifikasi Password 
+            if (authUsers[pass]) {
+                err.style.display = 'none';
+                const user = authUsers[pass];
+                sessionStorage.setItem('auth_user', JSON.stringify(user));
+                showApp(user);
+            } else {
+                err.style.display = 'block';
+            }
+        }
+
+        function showApp(user) {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('app-wrapper').classList.remove('hidden');
+            
+            // Ubah text profil di kanan atas
+            document.getElementById('topbar-user-name').innerText = `${user.name} (${user.role.toUpperCase()})`;
+            
+            // Load data ke sistem hanya saat login berhasil
+            if (db_karyawan.length === 0) {
+                fetchDataSupabase();
+            }
+        }
+
+        function logout() {
+            sessionStorage.removeItem('auth_user');
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.getElementById('app-wrapper').classList.add('hidden');
+            document.getElementById('login-password').value = ''; // Kosongkan input password
+            document.getElementById('login-id').value = '';
+        }
 
         // ------------------ PULL DATA DARI SUPABASE ------------------
         async function fetchDataSupabase() {
@@ -847,7 +939,6 @@
 
             btn.innerText = "Menyimpan..."; btn.disabled = true;
 
-            // Diset gaji_per_poin_ekstra ke 0 untuk mencegah error database bila disetting 'not null' pada skema lama
             const newEmp = { name, jabatan, umur, status_bpjs: bpjs, gaji_per_poin_pokok: gaji_pokok, gaji_per_poin_ekstra: 0, is_active };
 
             if(editId) {
