@@ -169,8 +169,8 @@
                     
                     <div class="table-container">
                         <table id="table-karyawan">
-                            <thead><tr><th>ID (Mesin)</th><th>Tgl Input</th><th>Nama Karyawan</th><th>Jabatan</th><th>Umur</th><th>Status BPJS</th><th>Gaji Pokok (Per Poin)</th><th>Status Aktif</th></tr></thead>
-                            <tbody><tr><td colspan="8" class="text-center">Mengambil data...</td></tr></tbody>
+                            <thead><tr><th>ID (Mesin)</th><th>Tgl Input</th><th>Nama Karyawan</th><th>Jabatan</th><th>Umur</th><th>Status BPJS</th><th>Gaji Pokok (Per Poin)</th><th>Status Aktif</th><th>Aksi</th></tr></thead>
+                            <tbody><tr><td colspan="9" class="text-center">Mengambil data...</td></tr></tbody>
                         </table>
                     </div>
                 </div>
@@ -298,13 +298,16 @@
         </div>
     </div>
 
-    <!-- Modal Tambah Karyawan (Existing) -->
+    <!-- Modal Tambah/Edit Karyawan -->
     <div id="modal-karyawan" class="modal">
         <div class="modal-content" style="width: 450px;">
             <div class="modal-header">
-                <span>Tambah Data Karyawan</span>
+                <span id="modal-title-karyawan">Tambah Data Karyawan</span>
                 <i class="fa-solid fa-times" style="cursor:pointer;" onclick="closeKaryawanModal()"></i>
             </div>
+            <!-- Hidden input untuk menampung ID saat mode EDIT -->
+            <input type="hidden" id="edit-emp-id" value="">
+            
             <div class="form-group">
                 <label>Nama Karyawan</label>
                 <input type="text" id="new-emp-name" placeholder="Masukkan nama lengkap">
@@ -329,10 +332,6 @@
             <div class="form-group">
                 <label>Gaji Pokok (Per Poin Pokok) - Rp</label>
                 <input type="number" id="new-emp-gaji-pokok" placeholder="Contoh: 100000" min="0">
-            </div>
-            <div class="form-group">
-                <label>Gaji Ekstra (Per Poin Ekstra/Lembur) - Rp</label>
-                <input type="number" id="new-emp-gaji-ekstra" placeholder="Contoh: 25000" min="0">
             </div>
             <div class="form-group">
                 <label>Status Aktif</label>
@@ -424,24 +423,31 @@
             }
         }
 
-        // --- FUNGSI BISNIS: HITUNG POIN (DIREVISI) ---
+        // --- FUNGSI BISNIS: HITUNG POIN DENGAN BATAS KETERLAMBATAN & EARLY OUT ---
         function hitungPoin(jamMasuk, jamKeluar, tipeHari) {
             if(!jamMasuk || !jamKeluar) return { pokok: 0, ekstra: 0 };
             
             let inT = new Date(`2000-01-01T${jamMasuk}`);
             let outT = new Date(`2000-01-01T${jamKeluar}`);
+            
+            // Toleransi Masuk 15 Menit di jam tertentu
+            let hIn = inT.getHours();
+            let mIn = inT.getMinutes();
+            if ((hIn === 7 || hIn === 10 || hIn === 13) && mIn <= 15) {
+                inT.setMinutes(0);
+                inT.setSeconds(0);
+            }
+
             let hours = (outT - inT) / (1000 * 60 * 60);
+            if(hours < 0) hours += 24; 
             
             let poinPokok = 0; let poinEkstra = 0;
-            
-            // Logika baru
             let isLiburOrWeekend = (tipeHari === 'Weekend' || tipeHari === 'Libur' || tipeHari === true);
 
             if (isLiburOrWeekend) {
                 if (hours >= 12.5) { 
                     poinPokok = 2; 
                     let diff = hours - 12.5;
-                    // Selisih min 1 jam agar dapat ekstra
                     poinEkstra = diff >= 1 ? diff : 0; 
                 } 
                 else { 
@@ -451,7 +457,6 @@
                 if (hours >= 9) { 
                     poinPokok = 1; 
                     let diff = hours - 9;
-                    // Selisih min 1 jam agar dapat ekstra
                     poinEkstra = diff >= 1 ? diff : 0; 
                 } 
                 else { 
@@ -475,7 +480,11 @@
                 totEkstra += p.ekstra;
 
                 let emp = db_karyawan.find(k => k.id == ab.emp_id);
-                if(emp) estPayroll += (p.pokok * emp.gaji_per_poin_pokok) + (p.ekstra * emp.gaji_per_poin_ekstra);
+                if(emp) {
+                    let gPokok = p.pokok * emp.gaji_per_poin_pokok;
+                    let gEkstra = (p.ekstra / 8) * 2 * emp.gaji_per_poin_pokok;
+                    estPayroll += gPokok + gEkstra;
+                }
             });
             document.getElementById('dash-total-lembur').innerText = totEkstra.toFixed(1);
             document.getElementById('dash-est-payroll').innerText = formatRp(estPayroll);
@@ -506,7 +515,7 @@
             tbody.innerHTML = '';
 
             if(db_karyawan.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="text-center">Data karyawan masih kosong</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center">Data karyawan masih kosong</td></tr>`;
                 return;
             }
 
@@ -521,6 +530,11 @@
                         <td><span class="badge ${emp.status_bpjs === 'Aktif' ? 'badge-active' : 'badge-inactive'}">${emp.status_bpjs}</span></td>
                         <td>${formatRp(emp.gaji_per_poin_pokok)}</td>
                         <td><span class="badge ${emp.is_active ? 'badge-active' : 'badge-inactive'}">${emp.is_active ? 'Aktif' : 'Non-Aktif'}</span></td>
+                        <td>
+                            <button class="btn btn-accent" style="padding:6px 12px; font-size:12px;" onclick="openKaryawanModal(${emp.id})">
+                                <i class="fa-solid fa-pen"></i> Edit
+                            </button>
+                        </td>
                     </tr>
                 `;
             });
@@ -636,8 +650,8 @@
                 let pEkstra = b.poin_ekstra_override !== null && b.poin_ekstra_override !== undefined ? b.poin_ekstra_override : calcEkstra;
                 let pBonus = b.poin || 0;
                 
-                let gPokok = b.gaji_pokok_override !== null && b.gaji_pokok_override !== undefined ? b.gaji_pokok_override : calcGajiPokok;
-                let gEkstra = pEkstra * e.gaji_per_poin_ekstra;
+                let gPokok = b.gaji_pokok_override !== null && b.gaji_pokok_override !== undefined ? b.gaji_pokok_override : (pPokok * e.gaji_per_poin_pokok);
+                let gEkstra = (pEkstra / 8) * 2 * e.gaji_per_poin_pokok;
                 let gBonus = b.nominal || (pBonus * e.gaji_per_poin_pokok);
                 
                 let potBpjs = e.status_bpjs === 'Aktif' ? 50000 : 0;
@@ -686,7 +700,6 @@
                 .eq('date', date);
                 
             if(error) {
-                // Handle fallback if they didn't add the tipe_hari column
                 console.warn(error);
                 alert("Gagal update. Pastikan Anda telah menambahkan kolom 'tipe_hari' pada database Supabase Anda!\n" + error.message);
             } else {
@@ -727,7 +740,6 @@
             document.getElementById('modal-poin-bonus').value = b.poin || 0;
             document.getElementById('modal-gaji-bonus').value = b.nominal || 0;
 
-            // Auto Hitung Gaji Bonus saat Poin Bonus diketik
             document.getElementById('modal-poin-bonus').oninput = function() {
                 let pb = parseFloat(this.value) || 0;
                 if(emp) document.getElementById('modal-gaji-bonus').value = pb * emp.gaji_per_poin_pokok;
@@ -769,7 +781,7 @@
 
             if (error) {
                 console.error(error);
-                alert("Gagal menyimpan ke Supabase. Pastikan Anda sudah menambahkan kolom poin_pokok_override, poin_ekstra_override, dan gaji_pokok_override di tabel bonus!");
+                alert("Gagal menyimpan ke Supabase.");
             } else {
                 db_bonus[bonusKey] = { 
                     poin: pBonus, 
@@ -785,38 +797,87 @@
             btn.innerText = "Simpan Detail"; btn.disabled = false;
         }
 
-        // --- MODAL KARYAWAN EXISTING ---
-        function openKaryawanModal() { document.getElementById('modal-karyawan').style.display = 'flex'; }
+        // --- MODAL KARYAWAN (TAMBAH & EDIT TANPA GAJI EKSTRA) ---
+        function openKaryawanModal(empId = null) { 
+            const modalTitle = document.getElementById('modal-title-karyawan');
+            const btnSave = document.getElementById('btn-save-karyawan');
+
+            if (empId) {
+                let emp = db_karyawan.find(k => k.id == empId);
+                if(!emp) return;
+
+                document.getElementById('edit-emp-id').value = emp.id;
+                document.getElementById('new-emp-name').value = emp.name;
+                document.getElementById('new-emp-jabatan').value = emp.jabatan;
+                document.getElementById('new-emp-umur').value = emp.umur;
+                document.getElementById('new-emp-bpjs').value = emp.status_bpjs;
+                document.getElementById('new-emp-gaji-pokok').value = emp.gaji_per_poin_pokok;
+                document.getElementById('new-emp-status').value = emp.is_active ? 'true' : 'false';
+
+                modalTitle.innerText = "Edit Data Karyawan";
+                btnSave.innerText = "Simpan Perubahan";
+            } else {
+                document.getElementById('edit-emp-id').value = '';
+                document.getElementById('new-emp-name').value = '';
+                document.getElementById('new-emp-jabatan').value = '';
+                document.getElementById('new-emp-umur').value = '';
+                document.getElementById('new-emp-bpjs').value = 'Aktif';
+                document.getElementById('new-emp-gaji-pokok').value = '';
+                document.getElementById('new-emp-status').value = 'true';
+
+                modalTitle.innerText = "Tambah Data Karyawan";
+                btnSave.innerText = "Buat Karyawan";
+            }
+            document.getElementById('modal-karyawan').style.display = 'flex'; 
+        }
+
         function closeKaryawanModal() { document.getElementById('modal-karyawan').style.display = 'none'; }
 
         async function saveKaryawan() {
             const btn = document.getElementById('btn-save-karyawan');
+            const editId = document.getElementById('edit-emp-id').value;
             const name = document.getElementById('new-emp-name').value.trim();
             const jabatan = document.getElementById('new-emp-jabatan').value.trim();
             const umur = parseInt(document.getElementById('new-emp-umur').value) || 0;
             const bpjs = document.getElementById('new-emp-bpjs').value;
             const gaji_pokok = parseInt(document.getElementById('new-emp-gaji-pokok').value) || 0;
-            const gaji_ekstra = parseInt(document.getElementById('new-emp-gaji-ekstra').value) || 0;
             const is_active = document.getElementById('new-emp-status').value === 'true';
 
             if(!name || !jabatan || gaji_pokok <= 0) return alert("Mohon isi form dengan lengkap!");
 
             btn.innerText = "Menyimpan..."; btn.disabled = true;
 
-            const newEmp = { name, jabatan, umur, status_bpjs: bpjs, gaji_per_poin_pokok: gaji_pokok, gaji_per_poin_ekstra: gaji_ekstra, is_active };
+            // Diset gaji_per_poin_ekstra ke 0 untuk mencegah error database bila disetting 'not null' pada skema lama
+            const newEmp = { name, jabatan, umur, status_bpjs: bpjs, gaji_per_poin_pokok: gaji_pokok, gaji_per_poin_ekstra: 0, is_active };
 
-            const { data, error } = await supabaseApp.from('karyawan').insert([newEmp]).select();
-
-            if (error) {
-                alert("Gagal menambahkan karyawan: " + error.message);
+            if(editId) {
+                // UPDATE EXISTING KARYAWAN
+                const { data, error } = await supabaseApp.from('karyawan').update(newEmp).eq('id', editId).select();
+                if (error) {
+                    alert("Gagal update karyawan: " + error.message);
+                } else {
+                    let idx = db_karyawan.findIndex(k => k.id == editId);
+                    if(idx > -1 && data && data.length > 0) db_karyawan[idx] = data[0];
+                    else await fetchDataSupabase();
+                    
+                    renderKaryawan(); renderDashboard(); closeKaryawanModal();
+                    alert(`Data karyawan ${name} berhasil diubah!`);
+                }
             } else {
-                if (data && data.length > 0) db_karyawan.push(data[0]);
-                else await fetchDataSupabase();
-                
-                renderKaryawan(); renderDashboard(); closeKaryawanModal();
-                alert(`Karyawan berhasil ditambahkan!`);
+                // INSERT NEW KARYAWAN
+                const { data, error } = await supabaseApp.from('karyawan').insert([newEmp]).select();
+                if (error) {
+                    alert("Gagal menambahkan karyawan: " + error.message);
+                } else {
+                    if (data && data.length > 0) db_karyawan.push(data[0]);
+                    else await fetchDataSupabase();
+                    
+                    renderKaryawan(); renderDashboard(); closeKaryawanModal();
+                    alert(`Karyawan berhasil ditambahkan!`);
+                }
             }
-            btn.innerText = "Buat Karyawan"; btn.disabled = false;
+            btn.innerText = editId ? "Simpan Perubahan" : "Buat Karyawan"; 
+            btn.disabled = false;
         }
 
         // --- FITUR PRINT ---
@@ -940,8 +1001,8 @@
                 let pEkstra = b.poin_ekstra_override !== null && b.poin_ekstra_override !== undefined ? b.poin_ekstra_override : data.totEkstra;
                 let pBonus = b.poin || 0;
                 
-                let gPokok = b.gaji_pokok_override !== null && b.gaji_pokok_override !== undefined ? b.gaji_pokok_override : (data.totPokok * e.gaji_per_poin_pokok);
-                let gEkstra = pEkstra * e.gaji_per_poin_ekstra;
+                let gPokok = b.gaji_pokok_override !== null && b.gaji_pokok_override !== undefined ? b.gaji_pokok_override : (pPokok * e.gaji_per_poin_pokok);
+                let gEkstra = (pEkstra / 8) * 2 * e.gaji_per_poin_pokok;
                 let gBonus = b.nominal || (pBonus * e.gaji_per_poin_pokok);
                 
                 let potBpjs = e.status_bpjs === 'Aktif' ? 50000 : 0;
