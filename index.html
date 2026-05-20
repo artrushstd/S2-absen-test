@@ -260,7 +260,10 @@
 
                         <div class="table-container">
                             <table id="table-payroll">
-                                <thead><tr><th>Nama</th><th>P. Pokok</th><th>P. Ekstra</th><th>P. Bonus</th><th>Gaji Pokok</th><th>Gaji Lembur</th><th>Gaji Bonus</th><th>Potongan BPJS</th><th>Total Gaji</th><th>Aksi</th></tr></thead>
+                                <thead>
+                                    <!-- Header ini akan diperbarui secara dinamis oleh JavaScript -->
+                                    <tr><th>Nama</th><th>P. Pokok</th><th>P. Ekstra</th><th>P. Bonus</th><th>Gaji Pokok</th><th>Gaji Lembur</th><th>Gaji Bonus</th><th>Potongan BPJS</th><th>Total Gaji</th><th>Aksi</th></tr>
+                                </thead>
                                 <tbody><tr><td colspan="10" class="text-center">Terapkan filter tanggal untuk melihat data</td></tr></tbody>
                             </table>
                         </div>
@@ -606,7 +609,7 @@
                     });
                 }
 
-                // Ambil Data Kasbon dan Angsuran (Tangani gracefully jika tabel belum dibuat di Supabase)
+                // Ambil Data Kasbon dan Angsuran
                 try {
                     let { data: kasbonData } = await supabaseApp.from('kasbon').select('*').order('id', {ascending: true});
                     if(kasbonData) db_kasbon = kasbonData;
@@ -830,6 +833,7 @@
         function resetFilterPayroll() { currentPayrollFilterName = null; document.getElementById('btn-reset-payroll').style.display = 'none'; renderPayroll(); }
 
         function renderPayroll() {
+            let thead = document.querySelector('#table-payroll thead');
             let tbody = document.querySelector('#table-payroll tbody');
             tbody.innerHTML = '';
 
@@ -850,9 +854,36 @@
             if(currentPayrollFilterName) empList = empList.filter(d => d.emp.name === currentPayrollFilterName);
 
             let hasData = false;
-            // CEK LOGIKA BPJS (Jika Range Tanggal End <= Tgl 10)
-            let endDateFilter = new Date(dateRangePayroll.end);
-            let isBpjsDeductibleMonth = endDateFilter.getDate() >= 10;
+            
+            // CEK LOGIKA BPJS BERDASARKAN TANGGAL 10 DALAM RANGE
+            let startD = new Date(dateRangePayroll.start + "T00:00:00");
+            let endD = new Date(dateRangePayroll.end + "T00:00:00");
+            let isBpjsDeductibleMonth = false;
+            
+            let tempD = new Date(startD);
+            while (tempD <= endD) {
+                if (tempD.getDate() === 10) {
+                    isBpjsDeductibleMonth = true;
+                    break;
+                }
+                tempD.setDate(tempD.getDate() + 1);
+            }
+
+            // Perbarui Kolom Table Header Dinamis
+            thead.innerHTML = `
+                <tr>
+                    <th>Nama</th>
+                    <th>P. Pokok</th>
+                    <th>P. Ekstra</th>
+                    <th>P. Bonus</th>
+                    <th>Gaji Pokok</th>
+                    <th>Gaji Lembur</th>
+                    <th>Gaji Bonus</th>
+                    ${isBpjsDeductibleMonth ? '<th>Potongan BPJS</th>' : ''}
+                    <th>Total Gaji</th>
+                    <th>Aksi</th>
+                </tr>
+            `;
 
             empList.forEach(data => {
                 if(data.totPokok === 0 && !currentPayrollFilterName) return;
@@ -874,10 +905,11 @@
                 let gEkstra = pEkstra * e.gaji_per_poin_pokok; 
                 let gBonus = b.nominal || (pBonus * e.gaji_per_poin_pokok);
                 
-                // Menerapkan Logika Potongan BPJS Baru
+                // Jika aktif & ada tgl 10 dalam range, potong 50000. Jika tidak, 0.
                 let potBpjs = (e.status_bpjs === 'Aktif' && isBpjsDeductibleMonth) ? 50000 : 0;
-                
                 let totGaji = gPokok + gEkstra + gBonus - potBpjs;
+
+                let bpjsColumnData = isBpjsDeductibleMonth ? `<td style="color:var(--danger)">${formatRp(potBpjs)}</td>` : '';
 
                 tbody.innerHTML += `
                     <tr>
@@ -888,7 +920,7 @@
                         <td>${formatRp(gPokok)}</td>
                         <td>${formatRp(gEkstra)}</td>
                         <td>${formatRp(gBonus)}</td>
-                        <td style="color:var(--danger)">${formatRp(potBpjs)}</td>
+                        ${bpjsColumnData}
                         <td><strong>${formatRp(totGaji)}</strong></td>
                         <td>
                             <button class="btn btn-accent" style="padding:6px 12px; font-size:12px;" onclick="openBonusModal(${e.id}, '${e.name}', ${calcPokok}, ${calcEkstra}, ${calcGajiPokok})">
@@ -899,7 +931,10 @@
                 `;
             });
 
-            if(!hasData) tbody.innerHTML = `<tr><td colspan="10" class="text-center">Data absensi / payroll kosong untuk periode ini</td></tr>`;
+            if(!hasData) {
+                let colSpan = isBpjsDeductibleMonth ? 10 : 9;
+                tbody.innerHTML = `<tr><td colspan="${colSpan}" class="text-center">Data absensi / payroll kosong untuk periode ini</td></tr>`;
+            }
         }
 
         // --- RENDER KASBON KARYAWAN ---
@@ -1276,6 +1311,20 @@
         }
 
         function printPayroll() {
+            // Cek ada tidaknya tanggal 10 dalam range
+            let startD = new Date(dateRangePayroll.start + "T00:00:00");
+            let endD = new Date(dateRangePayroll.end + "T00:00:00");
+            let isBpjsDeductibleMonth = false;
+            
+            let tempD = new Date(startD);
+            while (tempD <= endD) {
+                if (tempD.getDate() === 10) {
+                    isBpjsDeductibleMonth = true;
+                    break;
+                }
+                tempD.setDate(tempD.getDate() + 1);
+            }
+
             let html = `
                 <html>
                 <head>
@@ -1301,7 +1350,17 @@
                     </div>
                     <table>
                         <thead>
-                            <tr><th>Nama Karyawan</th><th>P. Pokok</th><th>P. Ekstra</th><th>P. Bonus</th><th>Gaji Pokok</th><th>Gaji Lembur</th><th>Gaji Bonus</th><th>Potongan BPJS</th><th>Total Gaji Bersih</th></tr>
+                            <tr>
+                                <th>Nama Karyawan</th>
+                                <th>P. Pokok</th>
+                                <th>P. Ekstra</th>
+                                <th>P. Bonus</th>
+                                <th>Gaji Pokok</th>
+                                <th>Gaji Lembur</th>
+                                <th>Gaji Bonus</th>
+                                ${isBpjsDeductibleMonth ? '<th>Potongan BPJS</th>' : ''}
+                                <th>Total Gaji Bersih</th>
+                            </tr>
                         </thead>
                         <tbody>
             `;
@@ -1323,8 +1382,6 @@
             if(currentPayrollFilterName) empList = empList.filter(d => d.emp.name === currentPayrollFilterName);
 
             let totalSemuaGaji = 0;
-            let endDateFilter = new Date(dateRangePayroll.end);
-            let isBpjsDeductibleMonth = endDateFilter.getDate() >= 10;
 
             empList.forEach(data => {
                 if(data.totPokok === 0 && !currentPayrollFilterName) return;
@@ -1346,6 +1403,8 @@
 
                 totalSemuaGaji += totGaji;
 
+                let bpjsColumnData = isBpjsDeductibleMonth ? `<td class="text-right" style="color:red;">${formatRp(potBpjs)}</td>` : '';
+
                 html += `<tr>
                     <td>${e.name}</td>
                     <td>${Number(pPokok.toFixed(5))}</td>
@@ -1354,14 +1413,15 @@
                     <td class="text-right">${formatRp(gPokok)}</td>
                     <td class="text-right">${formatRp(gEkstra)}</td>
                     <td class="text-right">${formatRp(gBonus)}</td>
-                    <td class="text-right" style="color:red;">${formatRp(potBpjs)}</td>
+                    ${bpjsColumnData}
                     <td class="text-right text-bold">${formatRp(totGaji)}</td>
                 </tr>`;
             });
 
+            let colspanTotal = isBpjsDeductibleMonth ? 8 : 7;
             html += `
                 <tr>
-                    <td colspan="8" class="text-right text-bold" style="padding-top: 15px;">TOTAL KESELURUHAN</td>
+                    <td colspan="${colspanTotal}" class="text-right text-bold" style="padding-top: 15px;">TOTAL KESELURUHAN</td>
                     <td class="text-right text-bold" style="padding-top: 15px; color: #297c3f; font-size:14px;">${formatRp(totalSemuaGaji)}</td>
                 </tr>
                 </tbody></table></body></html>`;
