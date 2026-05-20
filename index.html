@@ -526,7 +526,6 @@
                 mode: "range", 
                 dateFormat: "Y-m-d",
                 onOpen: function(selectedDates, dateStr, instance) {
-                    // Reset kalender langsung saat diklik dan otomatis set ke bulan berjalan
                     instance.clear();
                     let d = new Date();
                     let start = new Date(d.getFullYear(), d.getMonth(), 1);
@@ -538,7 +537,7 @@
             flatpickr("#date-range-absensi", fpConfig);
             flatpickr("#date-range-payroll", fpConfig);
             
-            // Set Default Input Text agar tidak kosong pada load pertama
+            // Set Default Input Text
             document.getElementById('date-range-absensi').value = `${firstDay} to ${todayStr}`;
             document.getElementById('date-range-payroll').value = `${firstDay} to ${todayStr}`;
             
@@ -634,7 +633,7 @@
             }
         }
 
-        // --- SISTEM PERHITUNGAN SHIFT & POIN ---
+        // --- SISTEM PERHITUNGAN SHIFT & POIN BARU ---
         function hitungPoin(jamMasuk, jamKeluar, tipeHari) {
             if(!jamMasuk || !jamKeluar) return { pokok: 0, ekstra: 0 };
             
@@ -659,21 +658,24 @@
             }
 
             let effectiveInNormal = inH;
-            if (inH > shiftStart && inH <= shiftStart + 0.25) {
-                effectiveInNormal = shiftStart; // Toleransi 15 Menit
+            if (inH > shiftStart && inH <= shiftStart + 0.1667) {
+                effectiveInNormal = shiftStart; // Toleransi 10 Menit
             }
 
             let startNormal = Math.max(effectiveInNormal, shiftStart);
             let endNormal = Math.min(outH, shiftEnd);
             let jamNormal = Math.max(0, endNormal - startNormal);
 
+            // Hitung Jam Lembur (selisih check-in out di luar shift)
             let lemburBefore = Math.max(0, shiftStart - inH);
             let lemburAfter = Math.max(0, outH - shiftEnd);
             let totalLembur = lemburBefore + lemburAfter;
             if (totalLembur < 1.0) totalLembur = 0;
 
             let poinPokok = isWeekend ? (jamNormal / 12.5) * 2 : (jamNormal / 9.0);
-            let poinEkstra = (totalLembur / 8.0) * 2; 
+            
+            // Aturan Baru: Poin Ekstra adalah mutlak/sama dengan jumlah selisih jam lembur (contoh lembur 2 jam = 2 poin ekstra).
+            let poinEkstra = totalLembur; 
 
             return { pokok: Number(poinPokok.toFixed(5)), ekstra: Number(poinEkstra.toFixed(5)) };
         }
@@ -694,7 +696,8 @@
                 let emp = db_karyawan.find(k => k.id == ab.emp_id);
                 if(emp) {
                     let gPokok = p.pokok * emp.gaji_per_poin_pokok;
-                    let gEkstra = p.ekstra * emp.gaji_per_poin_pokok; 
+                    // Aturan Baru: Gaji Lembur = gaji_harian * ((poin_extra / 8) * 2)
+                    let gEkstra = emp.gaji_per_poin_pokok * ((p.ekstra / 8) * 2);
                     estPayroll += gPokok + gEkstra;
                 }
             });
@@ -902,7 +905,10 @@
                 let pBonus = b.poin || 0;
                 
                 let gPokok = b.gaji_pokok_override !== null && b.gaji_pokok_override !== undefined ? b.gaji_pokok_override : (pPokok * e.gaji_per_poin_pokok);
-                let gEkstra = pEkstra * e.gaji_per_poin_pokok; 
+                
+                // Aturan Baru: Gaji Lembur = gaji_harian * ((poin_extra / 8) * 2)
+                let gEkstra = e.gaji_per_poin_pokok * ((pEkstra / 8) * 2); 
+                
                 let gBonus = b.nominal || (pBonus * e.gaji_per_poin_pokok);
                 
                 // Jika aktif & ada tgl 10 dalam range, potong 50000. Jika tidak, 0.
@@ -1395,7 +1401,10 @@
                 let pBonus = b.poin || 0;
                 
                 let gPokok = b.gaji_pokok_override !== null && b.gaji_pokok_override !== undefined ? b.gaji_pokok_override : (pPokok * e.gaji_per_poin_pokok);
-                let gEkstra = pEkstra * e.gaji_per_poin_pokok;
+                
+                // Aturan Baru: Gaji Lembur = gaji_harian * ((poin_extra / 8) * 2)
+                let gEkstra = e.gaji_per_poin_pokok * ((pEkstra / 8) * 2);
+                
                 let gBonus = b.nominal || (pBonus * e.gaji_per_poin_pokok);
                 
                 let potBpjs = (e.status_bpjs === 'Aktif' && isBpjsDeductibleMonth) ? 50000 : 0;
