@@ -1128,7 +1128,17 @@
             if(!tanggal || !total || total <= 0) return;
             const payload = { emp_id, tanggal_pinjaman: tanggal, total_pinjaman: total };
             const { data, error } = await supabaseApp.from('kasbon').insert([payload]).select();
-            if(!error) { db_kasbon.push(data?data[0]:{...payload, id:Date.now()}); closeTambahKasbon(); renderKasbon(); renderDashboard(); }
+            if(!error) {
+    db_kasbon.push(
+        data && data.length
+            ? data[0]
+            : { ...payload, id: Date.now() }
+    );
+
+    closeTambahKasbon();
+    renderKasbon();
+    renderDashboard();
+}
         }
         function openKasbonDetail(kasbonId) {
             currentKasbonId = kasbonId; let k = db_kasbon.find(x => x.id == kasbonId); if(!k) return;
@@ -1146,7 +1156,18 @@
             let nom = parseFloat(document.getElementById('input-nominal-angsuran').value); if(!nom || nom <= 0) return;
             const payload = { kasbon_id: currentKasbonId, tanggal_angsuran: todayStr, nominal: nom };
             const { data, error } = await supabaseApp.from('angsuran').insert([payload]).select();
-            if(!error) { db_angsuran.push(data?data[0]:{...payload, id:Date.now()}); closeTambahAngsuran(); openKasbonDetail(currentKasbonId); renderKasbon(); renderDashboard(); }
+            if(!error) {
+    db_angsuran.push(
+        data && data.length
+            ? data[0]
+            : { ...payload, id: Date.now() }
+    );
+
+    closeTambahAngsuran();
+    openKasbonDetail(currentKasbonId);
+    renderKasbon();
+    renderDashboard();
+}
         }
 
         // PRINT FUNCTIONS
