@@ -545,7 +545,7 @@
 
             // Step 1: Toleransi Keterlambatan Poin Pokok (15 Menit / 0.25 Jam)
             let effectiveInNormal = inH;
-            if (inH > shiftStart && inH <= shiftStart + 0.25) {
+            if (inH > shiftStart && inH <= shiftStart + 0.1667 ) {
                 effectiveInNormal = shiftStart; // Dianggap on-time, tidak potong jam normal
             }
 
