@@ -674,7 +674,7 @@
             let shift = getShiftDetails(jamMasuk, tipeHari);
             
             let effectiveInNormal = inH;
-            if (inH > shift.start && inH <= shift.start + 0.25) effectiveInNormal = shift.start; 
+            if (inH > shift.start && inH <= shift.start + 0.1667) effectiveInNormal = shift.start; 
 
             let lateness = Math.max(0, effectiveInNormal - shift.start);
             let startNormal = Math.max(effectiveInNormal, shift.start);
