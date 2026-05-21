@@ -296,8 +296,10 @@
                             <canvas id="chart-attendance"></canvas>
                         </div>
                         <div class="card">
-                            <h3 class="card-title">Statistik Estimasi Payroll Bulanan</h3>
-                            <canvas id="chart-payroll"></canvas>
+                            <h3 class="card-title">Aktivitas Terbaru</h3>
+                            <div class="activity-feed" id="dash-activity-feed" style="max-height: 400px; overflow-y:auto; padding-right:10px;">
+                                <div class="activity-item"><span class="activity-time">Sedang memuat...</span></div>
+                            </div>
                         </div>
                     </div>
 
@@ -348,12 +350,6 @@
                                     <thead><tr><th>Nama</th><th>Shift</th><th>Check-In</th><th>Check-Out</th><th>Status</th><th>Lembur</th></tr></thead>
                                     <tbody><tr><td colspan="6" class="text-center">Memuat data...</td></tr></tbody>
                                 </table>
-                            </div>
-                        </div>
-                        <div class="card">
-                            <h3 class="card-title">Aktivitas Terbaru</h3>
-                            <div class="activity-feed" id="dash-activity-feed" style="max-height: 400px; overflow-y:auto; padding-right:10px;">
-                                <div class="activity-item"><span class="activity-time">Sedang memuat...</span></div>
                             </div>
                         </div>
                     </div>
@@ -573,7 +569,6 @@
         // GLOBAL STATE / DATA STORAGE
         let db_karyawan = []; let db_absensi = []; let db_bonus = {}; let db_kasbon = []; let db_angsuran = [];
         let currentAbsensiFilterName = null; let currentPayrollFilterName = null;
-        let chartAttInstance = null; let chartPayInstance = null;
 
         let today = new Date();
         let firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
@@ -895,24 +890,6 @@
                 options: { responsive: true, maintainAspectRatio: false, scales: { x: { ticks:{color:tColor}, grid:{color:gColor} }, y: { ticks:{color:tColor, stepSize:1}, grid:{color:gColor} } }, plugins: { legend: { labels: { color: tColor } } } }
             });
 
-            // 2. Chart Payroll Dummy/Bulan (Untuk visualisasi 6 bulan)
-            let labelsMon = []; let dataPay = [];
-            for(let i=5; i>=0; i--) {
-                let d = new Date(); d.setMonth(d.getMonth() - i);
-                labelsMon.push(d.toLocaleString('id-ID',{month:'short'}));
-                // Simplify: Just random/mock variation around current month estimate to show a working chart since true history parsing is heavy.
-                // In production, loop same logic as month calculation above per month.
-                let est = parseFloat(document.getElementById('dash-est-payroll').innerText.replace(/[^0-9.-]+/g,""));
-                dataPay.push(i === 0 ? est : (est * (0.8 + Math.random()*0.4))); 
-            }
-
-            if(chartPayInstance) chartPayInstance.destroy();
-            let ctxPay = document.getElementById('chart-payroll').getContext('2d');
-            chartPayInstance = new Chart(ctxPay, {
-                type: 'bar',
-                data: { labels: labelsMon, datasets: [{ label: 'Total Payroll (Rp)', data: dataPay, backgroundColor: '#3b82f6', borderRadius: 6 }] },
-                options: { responsive: true, maintainAspectRatio: false, scales: { x: { ticks:{color:tColor}, grid:{display:false} }, y: { ticks:{color:tColor}, grid:{color:gColor} } }, plugins: { legend: { labels: { color: tColor } } } }
-            });
         }
 
         // CSV Export Data Dashboard
