@@ -93,6 +93,7 @@
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
         .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-bottom: 24px; }
         .grid-66-33 { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 24px; }
+        .grid-1 { display: grid; grid-template-columns: 1fr; gap: 24px; margin-bottom: 24px; }
 
         @media (max-width: 1200px) {
             .grid-66-33 { grid-template-columns: 1fr; }
@@ -289,7 +290,21 @@
                         </div>
                     </div>
 
-                    <!-- Row 2: Widgets -->
+                    <!-- Row 2: Charts & Activities -->
+                    <div class="grid-2">
+                        <div class="card">
+                            <h3 class="card-title">Statistik Kehadiran (7 Hari Terakhir)</h3>
+                            <canvas id="chart-attendance"></canvas>
+                        </div>
+                        <div class="card">
+                            <h3 class="card-title">Aktivitas Terbaru</h3>
+                            <div class="activity-feed" id="dash-activity-feed" style="max-height: 400px; overflow-y:auto; padding-right:10px;">
+                                <div class="activity-item"><span class="activity-time">Sedang memuat...</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Row 3: Widgets -->
                     <div class="grid-3">
                         <div class="card">
                             <h3 class="card-title"><i class="fa-solid fa-file-invoice-dollar" style="color:var(--primary)"></i> Ringkasan Payroll (Bulan Ini)</h3>
@@ -327,8 +342,8 @@
                         </div>
                     </div>
 
-                    <!-- Row 3: Today's Tables & Activities -->
-                    <div class="grid-66-33">
+                    <!-- Row 4: Today's Tables  -->
+                    <div class="grid-1">
                         <div class="card">
                             <h3 class="card-title">Tabel Absensi (Berdasarkan Filter)</h3>
                             <div class="table-container" style="max-height: 400px; overflow-y:auto;">
@@ -336,12 +351,6 @@
                                     <thead><tr><th>Nama</th><th>Shift</th><th>Check-In</th><th>Check-Out</th><th>Status</th><th>Lembur</th></tr></thead>
                                     <tbody><tr><td colspan="6" class="text-center">Memuat data...</td></tr></tbody>
                                 </table>
-                            </div>
-                        </div>
-                        <div class="card">
-                            <h3 class="card-title">Aktivitas Terbaru</h3>
-                            <div class="activity-feed" id="dash-activity-feed" style="max-height: 400px; overflow-y:auto; padding-right:10px;">
-                                <div class="activity-item"><span class="activity-time">Sedang memuat...</span></div>
                             </div>
                         </div>
                     </div>
@@ -561,7 +570,7 @@
         // GLOBAL STATE / DATA STORAGE
         let db_karyawan = []; let db_absensi = []; let db_bonus = {}; let db_kasbon = []; let db_angsuran = [];
         let currentAbsensiFilterName = null; let currentPayrollFilterName = null;
-        let chartAttInstance = null; let chartPayInstance = null;
+        let chartAttInstance = null; 
 
         let today = new Date();
         let firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
@@ -881,25 +890,6 @@
                     ]
                 },
                 options: { responsive: true, maintainAspectRatio: false, scales: { x: { ticks:{color:tColor}, grid:{color:gColor} }, y: { ticks:{color:tColor, stepSize:1}, grid:{color:gColor} } }, plugins: { legend: { labels: { color: tColor } } } }
-            });
-
-            // 2. Chart Payroll Dummy/Bulan (Untuk visualisasi 6 bulan)
-            let labelsMon = []; let dataPay = [];
-            for(let i=5; i>=0; i--) {
-                let d = new Date(); d.setMonth(d.getMonth() - i);
-                labelsMon.push(d.toLocaleString('id-ID',{month:'short'}));
-                // Simplify: Just random/mock variation around current month estimate to show a working chart since true history parsing is heavy.
-                // In production, loop same logic as month calculation above per month.
-                let est = parseFloat(document.getElementById('dash-est-payroll').innerText.replace(/[^0-9.-]+/g,""));
-                dataPay.push(i === 0 ? est : (est * (0.8 + Math.random()*0.4))); 
-            }
-
-            if(chartPayInstance) chartPayInstance.destroy();
-            let ctxPay = document.getElementById('chart-payroll').getContext('2d');
-            chartPayInstance = new Chart(ctxPay, {
-                type: 'bar',
-                data: { labels: labelsMon, datasets: [{ label: 'Total Payroll (Rp)', data: dataPay, backgroundColor: '#3b82f6', borderRadius: 6 }] },
-                options: { responsive: true, maintainAspectRatio: false, scales: { x: { ticks:{color:tColor}, grid:{display:false} }, y: { ticks:{color:tColor}, grid:{color:gColor} } }, plugins: { legend: { labels: { color: tColor } } } }
             });
         }
 
