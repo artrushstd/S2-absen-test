@@ -61,7 +61,7 @@
         .login-card h2 { margin-bottom: 8px; color: var(--text-dark); }
         .login-card p { color: var(--text-muted); font-size: 14px; margin-bottom: 32px; }
         
-        /* FIX: CSS untuk Menyembunyikan dan Merapikan Teks Peringatan Password */
+        /* CSS untuk Menyembunyikan Teks Peringatan Password */
         #login-error { 
             color: var(--danger); 
             font-size: 13px; 
@@ -172,7 +172,17 @@
         .activity-feed { position: relative; padding-left: 20px; }
         .activity-feed::before { content: ''; position: absolute; left: 6px; top: 0; bottom: 0; width: 2px; background: var(--border-color); }
         .activity-item { position: relative; padding-bottom: 16px; font-size: 13px; color: var(--text-dark); }
-        .activity-item::before { content: ''; position: absolute; left: -19px; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--primary); border: 2px solid var(--card-bg); }
+        .activity-item::before { 
+            content: ''; 
+            position: absolute; 
+            left: -19px; 
+            top: 4px; 
+            width: 10px; 
+            height: 10px; 
+            border-radius: 50%; 
+            background: var(--bullet-color, var(--primary)); 
+            border: 2px solid var(--card-bg); 
+        }
         .activity-time { font-size: 11px; color: var(--text-muted); margin-bottom: 2px; display: block; }
 
         canvas { max-height: 300px; width: 100%; }
@@ -198,7 +208,6 @@
                     <label>Password / Kode Akses</label>
                     <input type="password" id="login-password" placeholder="Masukkan Password" required>
                 </div>
-                <!-- FIX: Di sinilah teks error sandi berada dan kini tersembunyi berkat CSS baru -->
                 <div id="login-error">Password yang Anda masukkan salah.</div>
                 <button type="submit" class="btn btn-primary">Masuk ke Sistem</button>
             </form>
@@ -459,6 +468,7 @@
                         <div class="table-container">
                             <table id="table-payroll">
                                 <thead>
+                                    <!-- Header ini akan diperbarui secara dinamis oleh JavaScript -->
                                     <tr><th>Nama</th><th>P. Pokok</th><th>P. Ekstra</th><th>P. Bonus</th><th>Gaji Pokok</th><th>Gaji Lembur</th><th>Gaji Bonus</th><th>Potongan BPJS</th><th>Total Gaji</th><th>Aksi</th></tr>
                                 </thead>
                                 <tbody><tr><td colspan="10" class="text-center">Terapkan filter tanggal untuk melihat data</td></tr></tbody>
@@ -564,7 +574,7 @@
         </div>
     </div>
 
-    <!-- REVISI BARU: MODAL POPUP DETAIL POIN & PRESENSI HARIAN DARI PAYROLL -->
+    <!-- MODAL POPUP DETAIL POIN & PRESENSI HARIAN DARI PAYROLL -->
     <div id="modal-payroll-detail" class="modal">
         <div class="modal-content" style="width: 700px; max-width: 95%;">
             <div class="modal-header">
@@ -629,6 +639,7 @@
             let db_karyawan = []; let db_absensi = []; let db_bonus = {}; let db_kasbon = []; let db_angsuran = [];
             let currentAbsensiFilterName = null; let currentPayrollFilterName = null;
             let absensiSortColumn = 'date'; let absensiSortOrder = 'asc';
+            let payrollSortColumn = 'name'; let payrollSortOrder = 'asc'; // REVISI BARU: State sorting payroll
             let chartAttInstance = null;
 
             let today = new Date();
@@ -913,18 +924,81 @@
                     tbodyO.innerHTML += '<tr><td>' + o.emp + '</td><td>' + o.shift + '</td><td style="color:var(--warning); font-weight:600;">' + formatHours(o.total) + '</td><td>' + formatRp(o.est) + '</td></tr>';
                 });
 
-                let actHtml = '';
+                // REVISI BARU: Aktivitas Terbaru yang Realtime & Komprehensif
                 let activities = [];
-                absensiFiltered.forEach(function(a) { 
-                    let eObj = db_karyawan.find(function(k) { return k.id==a.emp_id; });
-                    let eName = eObj ? eObj.name : 'ID ' + a.emp_id;
-                    activities.push({ type: 'Absen', time: a.clock_in||'00:00', label: eName + ' check-in hari ini' });
+                
+                // 1. Mengumpulkan aktivitas absensi (Check-in, Check-out, Keterlambatan)
+                absensiFiltered.forEach(function(ab) { 
+                    let eObj = db_karyawan.find(function(k) { return k.id==ab.emp_id; });
+                    let eName = eObj ? eObj.name : 'ID ' + ab.emp_id;
+                    let tHari = ab.tipe_hari || (ab.is_weekend ? 'Weekend' : 'Weekday');
+                    let p = hitungPoinUtuh(ab.clock_in, ab.clock_out, tHari);
+
+                    if (ab.clock_in) {
+                        activities.push({
+                            type: 'Check-In',
+                            time: ab.clock_in,
+                            label: eName + ' melakukan Check-In'
+                        });
+                        if (p.lateness > 0) {
+                            activities.push({
+                                type: 'Keterlambatan',
+                                time: ab.clock_in,
+                                label: eName + ' terlambat bekerja ' + formatHours(p.lateness) + ' (' + p.shiftName + ')'
+                            });
+                        }
+                    }
+                    if (ab.clock_out) {
+                        activities.push({
+                            type: 'Check-Out',
+                            time: ab.clock_out,
+                            label: eName + ' melakukan Check-Out'
+                        });
+                    }
                 });
+
+                // 2. Mengumpulkan aktivitas Kasbon baru di tanggal filter dashboard
+                let kasbonToday = db_kasbon.filter(function(k) { return k.tanggal_pinjaman === filterDashboard.date; });
+                kasbonToday.forEach(function(k) {
+                    let eObj = db_karyawan.find(function(e) { return e.id == k.emp_id; });
+                    let eName = eObj ? eObj.name : 'ID ' + k.emp_id;
+                    activities.push({
+                        type: 'Kasbon Baru',
+                        time: '00:00', // Kasbon di database tidak menyimpan jam, set ke default 00:00
+                        label: eName + ' mengajukan pinjaman kasbon sebesar ' + formatRp(k.total_pinjaman)
+                    });
+                });
+
+                // 3. Mengumpulkan aktivitas Angsuran baru di tanggal filter dashboard
+                let angsuranToday = db_angsuran.filter(function(a) { return a.tanggal_angsuran === filterDashboard.date; });
+                angsuranToday.forEach(function(a) {
+                    let k = db_kasbon.find(function(kb) { return kb.id == a.kasbon_id; });
+                    let eObj = k ? db_karyawan.find(function(e) { return e.id == k.emp_id; }) : null;
+                    let eName = eObj ? eObj.name : 'Unknown';
+                    activities.push({
+                        type: 'Bayar Kasbon',
+                        time: '00:00',
+                        label: eName + ' mencicil angsuran kasbon sebesar ' + formatRp(a.nominal)
+                    });
+                });
+
+                // Urutkan aktivitas berdasarkan waktu descending
                 activities.sort(function(a,b) { return b.time.localeCompare(a.time); });
-                activities.slice(0, 10).forEach(function(a) {
-                    actHtml += '<div class="activity-item"><span class="activity-time">' + a.time + ' - ' + a.type + '</span>' + a.label + '</div>';
+
+                let actHtml = '';
+                activities.slice(0, 15).forEach(function(a) {
+                    let dotColor = 'var(--primary)';
+                    if (a.type === 'Keterlambatan') dotColor = 'var(--danger)';
+                    else if (a.type === 'Check-Out') dotColor = 'var(--info)';
+                    else if (a.type === 'Kasbon Baru') dotColor = 'var(--warning)';
+                    else if (a.type === 'Bayar Kasbon') dotColor = '#10b981'; // Green emerald
+
+                    actHtml += '<div class="activity-item" style="--bullet-color: ' + dotColor + ';">' +
+                        '<span class="activity-time">' + (a.time !== '00:00' ? a.time : 'Hari Ini') + ' - <strong>' + a.type + '</strong></span>' + 
+                        a.label + 
+                    '</div>';
                 });
-                if(!actHtml) actHtml = '<div class="activity-item">Tidak ada aktivitas terbaru</div>';
+                if(!actHtml) actHtml = '<div class="activity-item">Tidak ada aktivitas hari ini</div>';
                 document.getElementById('dash-activity-feed').innerHTML = actHtml;
 
                 renderCharts();
@@ -1047,6 +1121,17 @@
             window.clickNamePayroll = function(name) { currentPayrollFilterName = name; document.getElementById('btn-reset-payroll').style.display = 'inline-flex'; renderPayroll(); };
             window.resetFilterPayroll = function() { currentPayrollFilterName = null; document.getElementById('btn-reset-payroll').style.display = 'none'; renderPayroll(); };
 
+            // REVISI BARU: Terapkan Toggle Sorting untuk Halaman Payroll
+            window.toggleSortPayroll = function(column) {
+                if (payrollSortColumn === column) {
+                    payrollSortOrder = (payrollSortOrder === 'asc') ? 'desc' : 'asc';
+                } else {
+                    payrollSortColumn = column;
+                    payrollSortOrder = 'asc';
+                }
+                renderPayroll();
+            };
+
             function renderPayroll() {
                 let thead = document.querySelector('#table-payroll thead');
                 let tbody = document.querySelector('#table-payroll tbody'); tbody.innerHTML = '';
@@ -1066,17 +1151,43 @@
                 let empList = Object.keys(payrollData).map(function(k){ return payrollData[k]; });
                 if(currentPayrollFilterName) empList = empList.filter(function(d) { return d.emp.name === currentPayrollFilterName; });
 
-                let hasData = false;
                 let startD = new Date(dateRangePayroll.start + "T00:00:00"); let endD = new Date(dateRangePayroll.end + "T00:00:00");
                 let isBpjsDeductibleMonth = false;
                 let tempD = new Date(startD);
                 while (tempD <= endD) { if (tempD.getDate() === 10) { isBpjsDeductibleMonth = true; break; } tempD.setDate(tempD.getDate() + 1); }
 
-                thead.innerHTML = '<tr><th>Nama</th><th>P. Pokok</th><th>P. Ekstra</th><th>P. Bonus</th><th>Gaji Pokok</th><th>Gaji Lembur</th><th>Gaji Bonus</th>' + (isBpjsDeductibleMonth ? '<th>Potongan BPJS</th>' : '') + '<th>Total Gaji</th><th>Aksi</th></tr>';
+                // REVISI BARU: Render Headers Payroll dengan sistem clickable & sort icons
+                let cols = [
+                    { id: 'name', label: 'Nama' },
+                    { id: 'pokok', label: 'P. Pokok' },
+                    { id: 'ekstra', label: 'P. Ekstra' },
+                    { id: 'bonus', label: 'P. Bonus' },
+                    { id: 'gPokok', label: 'Gaji Pokok' },
+                    { id: 'gLembur', label: 'Gaji Lembur' },
+                    { id: 'gBonus', label: 'Gaji Bonus' }
+                ];
+                if (isBpjsDeductibleMonth) cols.push({ id: 'bpjs', label: 'Potongan BPJS' });
+                cols.push({ id: 'total', label: 'Total Gaji' });
+
+                let theadHtml = '<tr>';
+                cols.forEach(function(col) {
+                    let iconHtml = '';
+                    if (payrollSortColumn === col.id) {
+                        iconHtml = payrollSortOrder === 'asc' ? ' <i class="fa-solid fa-sort-up" style="color:var(--primary); margin-left:4px;"></i>' : ' <i class="fa-solid fa-sort-down" style="color:var(--primary); margin-left:4px;"></i>';
+                    } else {
+                        iconHtml = ' <i class="fa-solid fa-sort" style="color:var(--text-muted); margin-left:4px;"></i>';
+                    }
+                    theadHtml += '<th onclick="toggleSortPayroll(\'' + col.id + '\')" style="cursor:pointer; user-select:none;">' + col.label + iconHtml + '</th>';
+                });
+                theadHtml += '<th>Aksi</th></tr>';
+                thead.innerHTML = theadHtml;
+
+                // Hitung dan simpan data payroll ke array ter-evaluasi agar bisa di-sorting dengan presisi
+                let evaluatedPayrollList = [];
 
                 empList.forEach(function(data) {
                     if(data.totPokok === 0 && !currentPayrollFilterName) return;
-                    hasData = true; let e = data.emp; let bonusKey = e.id + "_" + dateRangePayroll.start;
+                    let e = data.emp; let bonusKey = e.id + "_" + dateRangePayroll.start;
                     let b = db_bonus[bonusKey] || { poin: 0, nominal: 0, poin_pokok_override: null, poin_ekstra_override: null, gaji_pokok_override: null };
 
                     let calcPokok = data.totPokok; let calcEkstra = data.totEkstra; let calcGajiPokok = calcPokok * e.gaji_per_poin_pokok;
@@ -1085,18 +1196,75 @@
                     let pBonus = b.poin || 0;
                     
                     let gPokok = (b.gaji_pokok_override !== null && b.gaji_pokok_override !== undefined) ? b.gaji_pokok_override : (pPokok * e.gaji_per_poin_pokok);
-                    let gEkstra = e.gaji_per_poin_pokok * ((pEkstra / 8) * 2); 
+                    let gLembur = e.gaji_per_poin_pokok * ((pEkstra / 8) * 2); 
                     let gBonus = b.nominal || (pBonus * e.gaji_per_poin_pokok);
                     
                     let potBpjs = (e.status_bpjs === 'Aktif' && isBpjsDeductibleMonth) ? 50000 : 0;
-                    let totGaji = gPokok + gEkstra + gBonus - potBpjs;
-                    let bpjsColumnData = isBpjsDeductibleMonth ? '<td style="color:var(--danger)">' + formatRp(potBpjs) + '</td>' : '';
+                    let totGaji = gPokok + gLembur + gBonus - potBpjs;
 
-                    // REVISI BARU: Klik Nama di sini sekarang memicu detail poin harian, bukan lagi mereset filter nama
-                    tbody.innerHTML += '<tr><td class="clickable-name" onclick="showPayrollDetailModal('+e.id+', \''+e.name+'\')">'+e.name+'</td><td>'+Number(pPokok.toFixed(5))+'</td><td>'+Number(pEkstra.toFixed(5))+'</td><td>'+Number(pBonus.toFixed(5))+'</td><td>'+formatRp(gPokok)+'</td><td>'+formatRp(gEkstra)+'</td><td>'+formatRp(gBonus)+'</td>'+bpjsColumnData+'<td><strong>'+formatRp(totGaji)+'</strong></td><td><button class="btn btn-accent" style="padding:6px 12px; font-size:12px;" onclick="openBonusModal('+e.id+', \''+e.name+'\', '+calcPokok+', '+calcEkstra+', '+calcGajiPokok+')"><i class="fa-solid fa-pen"></i> Edit</button></td></tr>';
+                    evaluatedPayrollList.push({
+                        emp: e,
+                        calcPokok: calcPokok,
+                        calcEkstra: calcEkstra,
+                        calcGajiPokok: calcGajiPokok,
+                        pPokok: pPokok,
+                        pEkstra: pEkstra,
+                        pBonus: pBonus,
+                        gPokok: gPokok,
+                        gLembur: gLembur,
+                        gBonus: gBonus,
+                        potBpjs: potBpjs,
+                        totGaji: totGaji
+                    });
                 });
 
-                if(!hasData) tbody.innerHTML = '<tr><td colspan="'+(isBpjsDeductibleMonth ? 10 : 9)+'" class="text-center">Data absensi kosong</td></tr>';
+                // REVISI BARU: Terapkan logika penyaringan (sorting) dinamis pada tabel Payroll
+                evaluatedPayrollList.sort(function(a, b) {
+                    let result = 0;
+                    if (payrollSortColumn === 'name') {
+                        result = a.emp.name.toLowerCase().localeCompare(b.emp.name.toLowerCase());
+                    } else if (payrollSortColumn === 'pokok') {
+                        result = a.pPokok - b.pPokok;
+                    } else if (payrollSortColumn === 'ekstra') {
+                        result = a.pEkstra - b.pEkstra;
+                    } else if (payrollSortColumn === 'bonus') {
+                        result = a.pBonus - b.pBonus;
+                    } else if (payrollSortColumn === 'gPokok') {
+                        result = a.gPokok - b.gPokok;
+                    } else if (payrollSortColumn === 'gLembur') {
+                        result = a.gLembur - b.gLembur;
+                    } else if (payrollSortColumn === 'gBonus') {
+                        result = a.gBonus - b.gBonus;
+                    } else if (payrollSortColumn === 'bpjs') {
+                        result = a.potBpjs - b.potBpjs;
+                    } else if (payrollSortColumn === 'total') {
+                        result = a.totGaji - b.totGaji;
+                    }
+                    return payrollSortOrder === 'asc' ? result : -result;
+                });
+
+                // Render tabel body payroll yang telah disortir
+                if(evaluatedPayrollList.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="' + (isBpjsDeductibleMonth ? 10 : 9) + '" class="text-center">Data absensi kosong</td></tr>';
+                } else {
+                    evaluatedPayrollList.forEach(function(row) {
+                        let e = row.emp;
+                        let bpjsColumnData = isBpjsDeductibleMonth ? '<td style="color:var(--danger)">' + formatRp(row.potBpjs) + '</td>' : '';
+                        
+                        tbody.innerHTML += '<tr>' +
+                            '<td class="clickable-name" onclick="showPayrollDetailModal(' + e.id + ', \'' + e.name + '\')">' + e.name + '</td>' +
+                            '<td>' + Number(row.pPokok.toFixed(5)) + '</td>' +
+                            '<td>' + Number(row.pEkstra.toFixed(5)) + '</td>' +
+                            '<td>' + Number(row.pBonus.toFixed(5)) + '</td>' +
+                            '<td>' + formatRp(row.gPokok) + '</td>' +
+                            '<td>' + formatRp(row.gLembur) + '</td>' +
+                            '<td>' + formatRp(row.gBonus) + '</td>' +
+                            bpjsColumnData +
+                            '<td><strong>' + formatRp(row.totGaji) + '</strong></td>' +
+                            '<td><button class="btn btn-accent" style="padding:6px 12px; font-size:12px;" onclick="openBonusModal(' + e.id + ', \'' + e.name + '\', ' + row.calcPokok + ', ' + row.calcEkstra + ', ' + row.calcGajiPokok + ')"><i class="fa-solid fa-pen"></i> Edit</button></td>' +
+                        '</tr>';
+                    });
+                }
             }
 
             function renderKaryawan() {
