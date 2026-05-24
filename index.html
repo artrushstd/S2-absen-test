@@ -639,7 +639,7 @@
             let db_karyawan = []; let db_absensi = []; let db_bonus = {}; let db_kasbon = []; let db_angsuran = [];
             let currentAbsensiFilterName = null; let currentPayrollFilterName = null;
             let absensiSortColumn = 'date'; let absensiSortOrder = 'asc';
-            let payrollSortColumn = 'name'; let payrollSortOrder = 'asc'; // REVISI BARU: State sorting payroll
+            let payrollSortColumn = 'name'; let payrollSortOrder = 'asc'; // State sorting payroll
             let chartAttInstance = null;
 
             let today = new Date();
@@ -927,6 +927,44 @@
                 // REVISI BARU: Aktivitas Terbaru yang Realtime & Komprehensif
                 let activities = [];
                 
+                // Helper untuk mendapatkan Tanggal (DD/MM/YYYY) dan Waktu (HH:MM:SS) secara presisi dan kebal dari bug browser
+                function parseDateTime(item, defaultTime) {
+                    let dStr = item.date || item.tanggal_pinjaman || item.tanggal_angsuran || todayStr;
+                    let tStr = defaultTime || '00:00:00';
+                    let ts = 0;
+                    
+                    if (item.created_at) {
+                        ts = new Date(item.created_at).getTime();
+                        let d = new Date(item.created_at);
+                        let hh = String(d.getHours()).padStart(2, '0');
+                        let mm = String(d.getMinutes()).padStart(2, '0');
+                        let ss = String(d.getSeconds()).padStart(2, '0');
+                        tStr = hh + ':' + mm + ':' + ss;
+                        
+                        let year = d.getFullYear();
+                        let month = String(d.getMonth() + 1).padStart(2, '0');
+                        let day = String(d.getDate()).padStart(2, '0');
+                        dStr = year + '-' + month + '-' + day;
+                    } else {
+                        // Jika tidak ada created_at, parse tanggal dan jam secara manual agar aman dari Invalid Date
+                        let dParts = dStr.split('-');
+                        let tParts = tStr.split(':');
+                        let year = parseInt(dParts[0], 10);
+                        let month = parseInt(dParts[1], 10) - 1;
+                        let day = parseInt(dParts[2], 10);
+                        let hour = parseInt(tParts[0], 10);
+                        let minute = parseInt(tParts[1], 10);
+                        let second = tParts[2] ? parseInt(tParts[2], 10) : 0;
+                        ts = new Date(year, month, day, hour, minute, second).getTime();
+                    }
+                    
+                    // Format ke DD/MM/YYYY
+                    let parts = dStr.split('-');
+                    let formattedDate = parts.length === 3 ? (parts[2] + '/' + parts[1] + '/' + parts[0]) : dStr;
+                    
+                    return { date: formattedDate, time: tStr, timestamp: ts };
+                }
+
                 // 1. Mengumpulkan aktivitas absensi (Check-in, Check-out, Keterlambatan)
                 absensiFiltered.forEach(function(ab) { 
                     let eObj = db_karyawan.find(function(k) { return k.id==ab.emp_id; });
@@ -935,23 +973,31 @@
                     let p = hitungPoinUtuh(ab.clock_in, ab.clock_out, tHari);
 
                     if (ab.clock_in) {
+                        let dt = parseDateTime(ab, ab.clock_in);
                         activities.push({
                             type: 'Check-In',
-                            time: ab.clock_in,
+                            date: dt.date,
+                            time: dt.time,
+                            timestamp: dt.timestamp,
                             label: eName + ' melakukan Check-In'
                         });
                         if (p.lateness > 0) {
                             activities.push({
                                 type: 'Keterlambatan',
-                                time: ab.clock_in,
+                                date: dt.date,
+                                time: dt.time,
+                                timestamp: dt.timestamp - 1, // Kurangi 1ms agar diurutkan tepat setelah Check-In
                                 label: eName + ' terlambat bekerja ' + formatHours(p.lateness) + ' (' + p.shiftName + ')'
                             });
                         }
                     }
                     if (ab.clock_out) {
+                        let dt = parseDateTime(ab, ab.clock_out);
                         activities.push({
                             type: 'Check-Out',
-                            time: ab.clock_out,
+                            date: dt.date,
+                            time: dt.time,
+                            timestamp: dt.timestamp,
                             label: eName + ' melakukan Check-Out'
                         });
                     }
@@ -962,9 +1008,12 @@
                 kasbonToday.forEach(function(k) {
                     let eObj = db_karyawan.find(function(e) { return e.id == k.emp_id; });
                     let eName = eObj ? eObj.name : 'ID ' + k.emp_id;
+                    let dt = parseDateTime(k, '23:59:59'); // Default letakkan di atas jika tidak ada created_at
                     activities.push({
                         type: 'Kasbon Baru',
-                        time: '00:00', // Kasbon di database tidak menyimpan jam, set ke default 00:00
+                        date: dt.date,
+                        time: (dt.time === '23:59:59') ? 'Hari Ini' : dt.time,
+                        timestamp: dt.timestamp,
                         label: eName + ' mengajukan pinjaman kasbon sebesar ' + formatRp(k.total_pinjaman)
                     });
                 });
@@ -975,15 +1024,18 @@
                     let k = db_kasbon.find(function(kb) { return kb.id == a.kasbon_id; });
                     let eObj = k ? db_karyawan.find(function(e) { return e.id == k.emp_id; }) : null;
                     let eName = eObj ? eObj.name : 'Unknown';
+                    let dt = parseDateTime(a, '23:59:58'); // Default di bawah kasbon jika tidak ada created_at
                     activities.push({
                         type: 'Bayar Kasbon',
-                        time: '00:00',
+                        date: dt.date,
+                        time: (dt.time === '23:59:58') ? 'Hari Ini' : dt.time,
+                        timestamp: dt.timestamp,
                         label: eName + ' mencicil angsuran kasbon sebesar ' + formatRp(a.nominal)
                     });
                 });
 
-                // Urutkan aktivitas berdasarkan waktu descending
-                activities.sort(function(a,b) { return b.time.localeCompare(a.time); });
+                // REVISI BARU: Urutkan berdasarkan UNIX timestamp descending (Paling Baru mutlak diletakkan paling atas)
+                activities.sort(function(a, b) { return b.timestamp - a.timestamp; });
 
                 let actHtml = '';
                 activities.slice(0, 15).forEach(function(a) {
@@ -993,8 +1045,11 @@
                     else if (a.type === 'Kasbon Baru') dotColor = 'var(--warning)';
                     else if (a.type === 'Bayar Kasbon') dotColor = '#10b981'; // Green emerald
 
+                    // REVISI BARU: Ubah format susunan atas bawah sesuai instruksi
+                    // Atas: Tanggal - waktu - nama aktivitasnya
+                    // Bawah: Nama + nama aktivitasnya (label)
                     actHtml += '<div class="activity-item" style="--bullet-color: ' + dotColor + ';">' +
-                        '<span class="activity-time">' + (a.time !== '00:00' ? a.time : 'Hari Ini') + ' - <strong>' + a.type + '</strong></span>' + 
+                        '<span class="activity-time">' + a.date + ' - ' + a.time + ' - <strong>' + a.type + '</strong></span>' + 
                         a.label + 
                     '</div>';
                 });
