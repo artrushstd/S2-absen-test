@@ -1429,15 +1429,19 @@
             }
 
             function renderKasbon() {
-                let tbody = document.querySelector('#table-kasbon tbody'); tbody.innerHTML = '';
-                if(db_kasbon.length === 0) { tbody.innerHTML = '<tr><td colspan="4" class="text-center">Data pinjaman kosong</td></tr>'; return; }
-                db_kasbon.forEach(function(k) {
-                    let emp = db_karyawan.find(function(e) { return e.id == k.emp_id; });
-                    let totalAngsuran = 0; db_angsuran.filter(function(a) { return a.kasbon_id == k.id; }).forEach(function(a) { totalAngsuran += parseFloat(a.nominal); });
-                    let sisa = parseFloat(k.total_pinjaman) - totalAngsuran;
-                    tbody.innerHTML += '<tr><td><strong>'+(emp?emp.name:k.emp_id)+'</strong></td><td>'+k.tanggal_pinjaman+'</td><td>'+formatRp(k.total_pinjaman)+'</td><td><span class="badge '+(sisa <= 0 ? 'badge-active' : 'badge-inactive')+' clickable-name" style="font-size:13px;" onclick="openKasbonDetail('+k.id+')">'+formatRp(sisa)+'</span></td></tr>';
-                });
-            }
+            let tbody = document.querySelector('#table-kasbon tbody'); tbody.innerHTML = '';
+            if(db_kasbon.length === 0) { tbody.innerHTML = '<tr><td colspan="4" class="text-center">Data pinjaman kosong</td></tr>'; return; }
+            db_kasbon.forEach(function(k) {
+                let emp = db_karyawan.find(function(e) { return e.id == k.emp_id; });
+                let totalAngsuran = 0; db_angsuran.filter(function(a) { return a.kasbon_id == k.id; }).forEach(function(a) { totalAngsuran += parseFloat(a.nominal); });
+                let sisa = parseFloat(k.total_pinjaman) - totalAngsuran;
+                
+                // REVISI: Jika sisa pinjaman <= 0, tampilkan teks LUNAS
+                let sisaTeks = sisa <= 0 ? 'LUNAS' : formatRp(sisa);
+
+                tbody.innerHTML += '<tr><td><strong>'+(emp?emp.name:k.emp_id)+'</strong></td><td>'+k.tanggal_pinjaman+'</td><td>'+formatRp(k.total_pinjaman)+'</td><td><span class="badge '+(sisa <= 0 ? 'badge-active' : 'badge-inactive')+' clickable-name" style="font-size:13px;" onclick="openKasbonDetail('+k.id+')">'+sisaTeks+'</span></td></tr>';
+            });
+        }
 
             // MODALS
             window.openTipeHariModal = function() { document.getElementById('modal-tipe-hari').style.display = 'flex'; };
@@ -1520,7 +1524,7 @@
                 let tbody = document.querySelector('#table-angsuran tbody'); tbody.innerHTML = ''; let sisa = parseFloat(k.total_pinjaman);
                 if(angsuranList.length === 0) tbody.innerHTML = '<tr><td colspan="4" class="text-center">Belum ada angsuran</td></tr>';
                 else { angsuranList.forEach(function(a, i) { sisa -= parseFloat(a.nominal); tbody.innerHTML += '<tr><td>'+a.tanggal_angsuran+'</td><td>Angsuran ke-'+(i+1)+'</td><td>'+formatRp(a.nominal)+'</td><td>'+formatRp(sisa)+'</td></tr>'; }); }
-                document.getElementById('kasbon-detail-sisa').innerText = "Sisa Terkini: " + formatRp(sisa); document.getElementById('modal-kasbon-detail').style.display = 'flex';
+                document.getElementById('kasbon-detail-sisa').innerText = "Sisa Terkini: " + (sisa <= 0 ? 'LUNAS' : formatRp(sisa)); document.getElementById('modal-kasbon-detail').style.display = 'flex';
             };
             window.closeKasbonDetail = function() { document.getElementById('modal-kasbon-detail').style.display = 'none'; currentKasbonId = null; };
             window.openTambahAngsuran = function() { if(!currentKasbonId) return; document.getElementById('input-nominal-angsuran').value = ''; document.getElementById('modal-tambah-angsuran').style.display = 'flex'; };
