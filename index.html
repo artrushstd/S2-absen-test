@@ -554,7 +554,7 @@
             <div class="modal-header"><span id="kasbon-detail-title">Detail Kasbon</span><i class="fa-solid fa-times" style="cursor:pointer;" onclick="closeKasbonDetail()"></i></div>
             <div style="margin-bottom: 16px; display:flex; justify-content: space-between; align-items:center;">
                 <h4 style="margin: 0; font-size:15px;" id="kasbon-detail-sisa">Sisa: Rp 0</h4>
-                <button class="btn btn-primary" onclick="openTambahAngsuran()"><i class="fa-solid fa-plus"></i> Tambah Angsuran</button>
+                <button class="btn btn-primary" id="btn-tambah-angsuran" onclick="openTambahAngsuran()"><i class="fa-solid fa-plus"></i> Tambah Angsuran</button>
             </div>
             <div class="table-container" style="max-height: 400px; overflow-y:auto;"><table id="table-angsuran"><thead><tr><th>Tanggal Angsuran</th><th>Angsuran Ke</th><th>Nominal</th><th>Sisa Pinjaman</th></tr></thead><tbody></tbody></table></div>
         </div>
@@ -1644,7 +1644,10 @@
                 let tbody = document.querySelector('#table-angsuran tbody'); tbody.innerHTML = ''; let sisa = parseFloat(k.total_pinjaman);
                 if(angsuranList.length === 0) tbody.innerHTML = '<tr><td colspan="4" class="text-center">Belum ada angsuran</td></tr>';
                 else { angsuranList.forEach(function(a, i) { sisa -= parseFloat(a.nominal); tbody.innerHTML += '<tr><td>'+a.tanggal_angsuran+'</td><td>Angsuran ke-'+(i+1)+'</td><td>'+formatRp(a.nominal)+'</td><td>'+formatRp(sisa)+'</td></tr>'; }); }
-                document.getElementById('kasbon-detail-sisa').innerText = "Sisa Terkini: " + (sisa <= 0 ? 'LUNAS' : formatRp(sisa)); document.getElementById('modal-kasbon-detail').style.display = 'flex';
+                document.getElementById('kasbon-detail-sisa').innerText = "Sisa Terkini: " + (sisa <= 0 ? 'LUNAS' : formatRp(sisa)); let btnAngsuran = document.getElementById('btn-tambah-angsuran');
+                if (btnAngsuran) {
+                    btnAngsuran.style.display = sisa <= 0 ? 'none' : 'inline-flex';
+                } document.getElementById('modal-kasbon-detail').style.display = 'flex';
             };
             window.closeKasbonDetail = function() { document.getElementById('modal-kasbon-detail').style.display = 'none'; currentKasbonId = null; };
             window.openTambahAngsuran = function() { if(!currentKasbonId) return; document.getElementById('input-nominal-angsuran').value = ''; document.getElementById('modal-tambah-angsuran').style.display = 'flex'; };
