@@ -618,89 +618,86 @@
             document.getElementById('modal-print-karyawan').style.display = 'none';
         };
 
-        // Fungsi Eksekusi Cetak Data Karyawan Dinamis
+        // Fungsi Eksekusi Cetak Data Karyawan Dinamis (Bebas Error Syntax)
         window.printKaryawanData = function() {
             // Membaca status checklist kolom
-            let showId = document.getElementById('print-col-id').checked;
-            let showJoin = document.getElementById('print-col-join').checked;
-            let showJabatan = document.getElementById('print-col-jabatan').checked;
-            let showUmur = document.getElementById('print-col-umur').checked;
-            let showBpjs = document.getElementById('print-col-bpjs').checked;
-            let showGaji = document.getElementById('print-col-gaji').checked;
+            var showId = document.getElementById('print-col-id').checked;
+            var showJoin = document.getElementById('print-col-join').checked;
+            var showJabatan = document.getElementById('print-col-jabatan').checked;
+            var showUmur = document.getElementById('print-col-umur').checked;
+            var showBpjs = document.getElementById('print-col-bpjs').checked;
+            var showGaji = document.getElementById('print-col-gaji').checked;
 
-            // WAJIB: Menyaring hanya karyawan yang masih aktif (is_active === true)
-            let activeKaryawan = db_karyawan.filter(function(k) { return k.is_active === true; });
+            // Menyaring hanya karyawan yang masih aktif (is_active === true)
+            var activeKaryawan = db_karyawan.filter(function(k) { 
+                return k.is_active === true; 
+            });
 
-            let html = `
-                <html>
-                <head>
-                    <title>Print Data Karyawan</title>
-                    <style>
-                        body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; color: #333; }
-                        .header { text-align: center; margin-bottom: 25px; }
-                        .header h2 { margin: 0; color: #1f497d; font-size: 22px; }
-                        .header p { margin: 5px 0 0 0; font-size: 14px; color: #555; }
-                        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
-                        th { background-color: #1f497d; color: white; border: 1px solid #1f497d; padding: 10px; font-weight: bold; text-align: left; }
-                        td { border: 1px solid #ccc; padding: 8px 12px; color: #333; }
-                        tr:nth-child(even) { background-color: #f9fbfd; }
-                    </style>
-                </head>
-                <body onload="window.print();">
-                    <div class="header">
-                        <h2>Daftar Database Karyawan Aktif</h2>
-                        <p>Suharno 2 Database System</p>
-                    </div>
-                    <table>
-                        <thead>
-                            <tr>
-                                ${showId ? '<th>ID Mesin</th>' : ''}
-                                ${showJoin ? '<th>Tanggal Join</th>' : ''}
-                                <th>Nama Karyawan</th>
-                                ${showJabatan ? '<th>Jabatan</th>' : ''}
-                                ${showUmur ? '<th>Umur</th>' : ''}
-                                ${showBpjs ? '<th>Status BPJS</th>' : ''}
-                                ${showGaji ? '<th>Gaji Harian Pokok</th>' : ''}
-                            </tr>
-                        </thead>
-                        <tbody>
-            `;
+            // Membangun dokumen HTML untuk dicetak secara aman
+            var html = '<html><head><title>Print Data Karyawan</title>';
+            html += '<style>';
+            html += 'body { font-family: "Segoe UI", Arial, sans-serif; padding: 20px; color: #333; }';
+            html += '.header { text-align: center; margin-bottom: 25px; }';
+            html += '.header h2 { margin: 0; color: #1f497d; font-size: 22px; }';
+            html += '.header p { margin: 5px 0 0 0; font-size: 14px; color: #555; }';
+            html += 'table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }';
+            html += 'th { background-color: #1f497d; color: white; border: 1px solid #1f497d; padding: 10px; font-weight: bold; text-align: left; }';
+            html += 'td { border: 1px solid #ccc; padding: 8px 12px; color: #333; }';
+            html += 'tr:nth-child(even) { background-color: #f9fbfd; }';
+            html += '</style></head><body onload="window.print();">';
+            
+            html += '<div class="header">';
+            html += '<h2>Daftar Database Karyawan Aktif</h2>';
+            html += '<p>Suharno 2 Database System</p>';
+            html += '</div>';
+            
+            html += '<table><thead><tr>';
+            if (showId) html += '<th>ID Mesin</th>';
+            if (showJoin) html += '<th>Tanggal Join</th>';
+            html += '<th>Nama Karyawan</th>';
+            if (showJabatan) html += '<th>Jabatan</th>';
+            if (showUmur) html += '<th>Umur</th>';
+            if (showBpjs) html += '<th>Status BPJS</th>';
+            if (showGaji) html += '<th>Gaji Harian Pokok</th>';
+            html += '</tr></thead><tbody>';
 
             if (activeKaryawan.length === 0) {
-                let colSpan = 1 + (showId?1:0) + (showJoin?1:0) + (showJabatan?1:0) + (showUmur?1:0) + (showBpjs?1:0) + (showGaji?1:0);
-                html += `<tr><td colspan="${colSpan}" style="text-align:center;">Tidak ada data karyawan aktif untuk dicetak</td></tr>`;
+                var colSpan = 1;
+                if (showId) colSpan++;
+                if (showJoin) colSpan++;
+                if (showJabatan) colSpan++;
+                if (showUmur) colSpan++;
+                if (showBpjs) colSpan++;
+                if (showGaji) colSpan++;
+                html += '<tr><td colspan="' + colSpan + '" style="text-align:center;">Tidak ada data karyawan aktif untuk dicetak</td></tr>';
             } else {
-                const todayDate = new Date();
+                var todayDate = new Date();
                 activeKaryawan.forEach(function(emp) {
-                    let umurStr = '-';
+                    var umurStr = '-';
                     if (emp.tanggal_lahir) {
-                        const birthDate = new Date(emp.tanggal_lahir);
-                        let age = todayDate.getFullYear() - birthDate.getFullYear();
-                        const m = todayDate.getMonth() - birthDate.getMonth();
+                        var birthDate = new Date(emp.tanggal_lahir);
+                        var age = todayDate.getFullYear() - birthDate.getFullYear();
+                        var m = todayDate.getMonth() - birthDate.getMonth();
                         if (m < 0 || (m === 0 && todayDate.getDate() < birthDate.getDate())) age--;
                         umurStr = age + ' Thn';
                     }
 
-                    html += `<tr>
-                        ${showId ? `<td><strong>${emp.id}</strong></td>` : ''}
-                        ${showJoin ? `<td>${emp.join_date || '-'}</td>` : ''}
-                        <td><strong>${emp.name}</strong></td>
-                        ${showJabatan ? `<td>${emp.jabatan || '-'}</td>` : ''}
-                        ${showUmur ? `<td>${umurStr}</td>` : ''}
-                        ${showBpjs ? `<td>${emp.status_bpjs}</td>` : ''}
-                        ${showGaji ? `<td>${formatRp(emp.gaji_per_poin_pokok)}</td>` : ''}
-                    </tr>`;
+                    html += '<tr>';
+                    if (showId) html += '<td><strong>' + emp.id + '</strong></td>';
+                    if (showJoin) html += '<td>' + (emp.join_date || '-') + '</td>';
+                    html += '<td><strong>' + emp.name + '</strong></td>';
+                    if (showJabatan) html += '<td>' + (emp.jabatan || '-') + '</td>';
+                    if (showUmur) html += '<td>' + umurStr + '</td>';
+                    if (showBpjs) html += '<td>' + emp.status_bpjs + '</td>';
+                    if (showGaji) html += '<td>' + formatRp(emp.gaji_per_poin_pokok) + '</td>';
+                    html += '</tr>';
                 });
             }
 
-            html += `
-                        </tbody>
-                    </table>
-                </body>
-                </html>
-            `;
+            html += '</tbody></table></body></html>';
 
-            let win = window.open('', '_blank');
+            // Membuka jendela cetak baru
+            var win = window.open('', '_blank');
             win.document.write(html);
             win.document.close();
             closePrintKaryawanModal();
