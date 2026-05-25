@@ -1682,27 +1682,174 @@
             win.document.close();
         };
             window.printPayroll = function() {
-                let startD = new Date(dateRangePayroll.start); let endD = new Date(dateRangePayroll.end);
-                let isBpjsMonth = false; for(let d=new Date(startD); d<=endD; d.setDate(d.getDate()+1)) { if(d.getDate()===10){ isBpjsMonth=true; break; } }
-                let html = '<html><head><title>Print Payroll</title><style>body{font-family:Arial;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:8px;text-align:left}.r{text-align:right}</style></head><body onload="window.print()"><h2>Payroll '+dateRangePayroll.start+' s/d '+dateRangePayroll.end+'</h2><table><tr><th>Nama</th><th>Gaji Pokok</th><th>Gaji Lembur</th><th>Bonus</th>'+(isBpjsMonth?'<th>BPJS</th>':'')+'<th>Total</th></tr>';
+            let startD = new Date(dateRangePayroll.start + "T00:00:00"); 
+            let endD = new Date(dateRangePayroll.end + "T00:00:00");
+            let isBpjsMonth = false; 
+            
+            let tempD = new Date(startD);
+            while (tempD <= endD) { 
+                if (tempD.getDate() === 10) { 
+                    isBpjsMonth = true; 
+                    break; 
+                } 
+                tempD.setDate(tempD.getDate() + 1); 
+            }
+
+            let payrollData = {}; 
+            db_karyawan.forEach(function(emp) { 
+                payrollData[emp.id] = { emp: emp, totPokok: 0, totEkstra: 0 }; 
+            });
+
+            let filteredAbsensi = db_absensi.filter(function(ab) { 
+                return ab.date >= dateRangePayroll.start && ab.date <= dateRangePayroll.end; 
+            });
+            filteredAbsensi.forEach(function(ab) { 
+                if(payrollData[ab.emp_id]) { 
+                    let tHari = ab.tipe_hari || (ab.is_weekend ? 'Weekend' : 'Weekday');
+                    let p = hitungPoinUtuh(ab.clock_in, ab.clock_out, tHari);
+                    payrollData[ab.emp_id].totPokok += p.pokok;
+                    payrollData[ab.emp_id].totEkstra += p.ekstra;
+                }
+            });
+
+            let empList = Object.keys(payrollData).map(function(k){ return payrollData[k]; });
+            if(currentPayrollFilterName) empList = empList.filter(function(d) { return d.emp.name === currentPayrollFilterName; });
+
+            // Urutkan nama karyawan secara alfabetis (A-Z)
+            empList.sort(function(a, b) {
+                return a.emp.name.toLowerCase().localeCompare(b.emp.name.toLowerCase());
+            });
+
+            let html = `
+                <html>
+                <head>
+                    <title>Print Slip Payroll</title>
+                    <style>
+                        @page {
+                            size: A4 portrait;
+                            margin: 12mm 10mm;
+                        }
+                        body {
+                            font-family: 'Segoe UI', Arial, sans-serif;
+                            margin: 0;
+                            padding: 0;
+                            background: #ffffff;
+                            color: #000;
+                        }
+                        .grid-container {
+                            display: grid;
+                            grid-template-columns: 1fr 1fr;
+                            column-gap: 15px;
+                            row-gap: 12px;
+                        }
+                        .payroll-card {
+                            border: 1.5px solid #000;
+                            background: #fff;
+                            page-break-inside: avoid;
+                            box-sizing: border-box;
+                        }
+                        .payroll-card table {
+                            width: 100%;
+                            border-collapse: collapse;
+                        }
+                        .payroll-card th, .payroll-card td {
+                            border: 1px solid #000;
+                            padding: 4px 8px;
+                            font-size: 11.5px;
+                            height: 22px;
+                            box-sizing: border-box;
+                        }
+                        .payroll-card th {
+                            font-size: 12.5px;
+                            font-weight: bold;
+                            text-align: center;
+                            background-color: #ffffff;
+                        }
+                        .bpjs-row {
+                            background-color: #fce8e6; /* Soft pink sesuai contoh gambar */
+                        }
+                        .total-row {
+                            background-color: #ffffff;
+                            font-size: 12px;
+                        }
+                    </style>
+                </head>
+                <body onload="window.print();">
+                    <div class="grid-container">
+            `;
+
+            empList.forEach(function(data) {
+                if(data.totPokok === 0 && !currentPayrollFilterName) return;
                 
-                let pData = {}; db_karyawan.forEach(function(e) { pData[e.id] = { emp:e, pk:0, ek:0 }; });
-                db_absensi.filter(function(a) { return a.date >= dateRangePayroll.start && a.date <= dateRangePayroll.end; }).forEach(function(a) { if(pData[a.emp_id]){ let p=hitungPoinUtuh(a.clock_in, a.clock_out, a.tipe_hari); pData[a.emp_id].pk+=p.pokok; pData[a.emp_id].ek+=p.ekstra; }});
-                let totAll = 0;
-                Object.keys(pData).forEach(function(kId) {
-                    let d = pData[kId];
-                    if(d.pk===0) return; let e=d.emp; let b=db_bonus[e.id+"_"+dateRangePayroll.start]||{};
-                    let ppk=(b.poin_pokok_override !== null && b.poin_pokok_override !== undefined) ? b.poin_pokok_override : d.pk; 
-                    let pek=(b.poin_ekstra_override !== null && b.poin_ekstra_override !== undefined) ? b.poin_ekstra_override : d.ek;
-                    let gajiHarian = e.gaji_per_poin_pokok || 0;
-                    let gpk=(b.gaji_pokok_override !== null && b.gaji_pokok_override !== undefined) ? b.gaji_pokok_override : (ppk*gajiHarian); 
-                    let gek=gajiHarian*((pek/8)*2); 
-                    let gb=b.nominal||((b.poin||0)*gajiHarian);
-                    let pot=(e.status_bpjs==='Aktif'&&isBpjsMonth)?50000:0; let t=gpk+gek+gb-pot; totAll+=t;
-                    html+='<tr><td>'+e.name+'</td><td class="r">'+formatRp(gpk)+'</td><td class="r">'+formatRp(gek)+'</td><td class="r">'+formatRp(gb)+'</td>'+(isBpjsMonth?'<td class="r">'+formatRp(pot)+'</td>':'')+'<td class="r"><b>'+formatRp(t)+'</b></td></tr>';
-                });
-                window.open('','_blank').document.write(html+'<tr><td colspan="'+(isBpjsMonth?5:4)+'" class="r"><b>TOTAL</b></td><td class="r"><b>' + formatRp(totAll) + '</b></td></tr></table></body></html>');
-            };
+                let e = data.emp; 
+                let bonusKey = e.id + "_" + dateRangePayroll.start;
+                let b = db_bonus[bonusKey] || { poin: 0, nominal: 0, poin_pokok_override: null, poin_ekstra_override: null, gaji_pokok_override: null };
+
+                let calcPokok = data.totPokok; 
+                let calcEkstra = data.totEkstra; 
+
+                let pPokok = (b.poin_pokok_override !== null && b.poin_pokok_override !== undefined) ? b.poin_pokok_override : calcPokok;
+                let pEkstra = (b.poin_ekstra_override !== null && b.poin_ekstra_override !== undefined) ? b.poin_ekstra_override : calcEkstra;
+                let pBonus = b.poin || 0;
+                
+                let gPokok = (b.gaji_pokok_override !== null && b.gaji_pokok_override !== undefined) ? b.gaji_pokok_override : (pPokok * e.gaji_per_poin_pokok);
+                let gLembur = e.gaji_per_poin_pokok * ((pEkstra / 8) * 2); 
+                let gBonus = b.nominal || (pBonus * e.gaji_per_poin_pokok);
+                
+                let potBpjs = (e.status_bpjs === 'Aktif' && isBpjsMonth) ? 50000 : 0; 
+                let totGaji = gPokok + gLembur + gBonus - potBpjs;
+
+                html += `
+                    <div class="payroll-card">
+                        <table>
+                            <tr>
+                                <th colspan="3">${e.name}</th>
+                            </tr>
+                            <tr>
+                                <td style="width: 25%;">Pokok:</td>
+                                <td style="width: 20%; text-align: center; color: red; font-weight: bold;">
+                                    ${pPokok > 0 ? Number(pPokok.toFixed(5)) : ''}
+                                </td>
+                                <td style="width: 55%; text-align: right;">${formatRp(gPokok)}</td>
+                            </tr>
+                            <tr>
+                                <td>Extra:</td>
+                                <td style="text-align: center; color: red; font-weight: bold;">
+                                    ${pEkstra > 0 ? Number(pEkstra.toFixed(5)) : ''}
+                                </td>
+                                <td style="text-align: right;">${formatRp(gLembur)}</td>
+                            </tr>
+                            <tr class="bpjs-row">
+                                ${potBpjs > 0 ? `
+                                    <td><strong>BPJS</strong></td>
+                                    <td></td>
+                                    <td style="text-align: right; font-weight: bold;">${formatRp(potBpjs)}</td>
+                                ` : `
+                                    <td>&nbsp;</td>
+                                    <td></td>
+                                    <td></td>
+                                `}
+                            </tr>
+                            <tr class="total-row">
+                                <td><strong>Total:</strong></td>
+                                <td></td>
+                                <td style="text-align: right; font-weight: bold;">${formatRp(totGaji)}</td>
+                            </tr>
+                        </table>
+                    </div>
+                `;
+            });
+
+            html += `
+                    </div>
+                </body>
+                </html>
+            `;
+            
+            let win = window.open('', '_blank');
+            win.document.write(html);
+            win.document.close();
+        };
 
             window.switchPage = function(pageId, element) {
                 document.querySelectorAll('.page-content, div[id^="page-"]').forEach(function(el) { el.classList.add('hidden'); });
