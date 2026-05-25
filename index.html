@@ -609,99 +609,12 @@
     </div>
 
     <script>
-
-// Fungsi Kontrol Modal Print Karyawan
-        window.openPrintKaryawanModal = function() {
-            document.getElementById('modal-print-karyawan').style.display = 'flex';
-        };
-        window.closePrintKaryawanModal = function() {
-            document.getElementById('modal-print-karyawan').style.display = 'none';
-        };
-
-        // Fungsi Eksekusi Cetak Data Karyawan Dinamis (Bebas Error Syntax)
-        window.printKaryawanData = function() {
-            // Membaca status checklist kolom
-            var showId = document.getElementById('print-col-id').checked;
-            var showJoin = document.getElementById('print-col-join').checked;
-            var showJabatan = document.getElementById('print-col-jabatan').checked;
-            var showUmur = document.getElementById('print-col-umur').checked;
-            var showBpjs = document.getElementById('print-col-bpjs').checked;
-            var showGaji = document.getElementById('print-col-gaji').checked;
-
-            // Menyaring hanya karyawan yang masih aktif (is_active === true)
-            var activeKaryawan = db_karyawan.filter(function(k) { 
-                return k.is_active === true; 
-            });
-
-            // Membangun dokumen HTML untuk dicetak secara aman
-            var html = '<html><head><title>Print Data Karyawan</title>';
-            html += '<style>';
-            html += 'body { font-family: "Segoe UI", Arial, sans-serif; padding: 20px; color: #333; }';
-            html += '.header { text-align: center; margin-bottom: 25px; }';
-            html += '.header h2 { margin: 0; color: #1f497d; font-size: 22px; }';
-            html += '.header p { margin: 5px 0 0 0; font-size: 14px; color: #555; }';
-            html += 'table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }';
-            html += 'th { background-color: #1f497d; color: white; border: 1px solid #1f497d; padding: 10px; font-weight: bold; text-align: left; }';
-            html += 'td { border: 1px solid #ccc; padding: 8px 12px; color: #333; }';
-            html += 'tr:nth-child(even) { background-color: #f9fbfd; }';
-            html += '</style></head><body onload="window.print();">';
-            
-            html += '<div class="header">';
-            html += '<h2>Daftar Database Karyawan Aktif</h2>';
-            html += '<p>Suharno 2 Database System</p>';
-            html += '</div>';
-            
-            html += '<table><thead><tr>';
-            if (showId) html += '<th>ID Mesin</th>';
-            if (showJoin) html += '<th>Tanggal Join</th>';
-            html += '<th>Nama Karyawan</th>';
-            if (showJabatan) html += '<th>Jabatan</th>';
-            if (showUmur) html += '<th>Umur</th>';
-            if (showBpjs) html += '<th>Status BPJS</th>';
-            if (showGaji) html += '<th>Gaji Harian Pokok</th>';
-            html += '</tr></thead><tbody>';
-
-            if (activeKaryawan.length === 0) {
-                var colSpan = 1;
-                if (showId) colSpan++;
-                if (showJoin) colSpan++;
-                if (showJabatan) colSpan++;
-                if (showUmur) colSpan++;
-                if (showBpjs) colSpan++;
-                if (showGaji) colSpan++;
-                html += '<tr><td colspan="' + colSpan + '" style="text-align:center;">Tidak ada data karyawan aktif untuk dicetak</td></tr>';
-            } else {
-                var todayDate = new Date();
-                activeKaryawan.forEach(function(emp) {
-                    var umurStr = '-';
-                    if (emp.tanggal_lahir) {
-                        var birthDate = new Date(emp.tanggal_lahir);
-                        var age = todayDate.getFullYear() - birthDate.getFullYear();
-                        var m = todayDate.getMonth() - birthDate.getMonth();
-                        if (m < 0 || (m === 0 && todayDate.getDate() < birthDate.getDate())) age--;
-                        umurStr = age + ' Thn';
-                    }
-
-                    html += '<tr>';
-                    if (showId) html += '<td><strong>' + emp.id + '</strong></td>';
-                    if (showJoin) html += '<td>' + (emp.join_date || '-') + '</td>';
-                    html += '<td><strong>' + emp.name + '</strong></td>';
-                    if (showJabatan) html += '<td>' + (emp.jabatan || '-') + '</td>';
-                    if (showUmur) html += '<td>' + umurStr + '</td>';
-                    if (showBpjs) html += '<td>' + emp.status_bpjs + '</td>';
-                    if (showGaji) html += '<td>' + formatRp(emp.gaji_per_poin_pokok) + '</td>';
-                    html += '</tr>';
-                });
-            }
-
-            html += '</tbody></table></body></html>';
-
-            // Membuka jendela cetak baru
-            var win = window.open('', '_blank');
-            win.document.write(html);
-            win.document.close();
-            closePrintKaryawanModal();
-        };
+    // 1. PINDAHKAN DEKLARASI INI KE PALING ATAS (DI LUAR & SEBELUM BLOK 'try'):
+    var db_karyawan = [];
+    var db_absensi = [];
+    var db_bonus = {};
+    var db_kasbon = [];
+    var db_angsuran = [];
         
         // Membungkus seluruh inisialisasi agar kebal dari error
         try {
@@ -1217,6 +1130,102 @@
             // ==========================================
             // PAYROLL, KARYAWAN, KASBON FUNCTIONS
             // ==========================================
+
+    // Fungsi Kontrol Modal Print Karyawan
+        window.openPrintKaryawanModal = function() {
+            document.getElementById('modal-print-karyawan').style.display = 'flex';
+        };
+        window.closePrintKaryawanModal = function() {
+            document.getElementById('modal-print-karyawan').style.display = 'none';
+        };
+
+        // Fungsi Eksekusi Cetak Data Karyawan Dinamis (Bebas Error Syntax)
+        window.printKaryawanData = function() {
+            // Membaca status checklist kolom
+            var showId = document.getElementById('print-col-id').checked;
+            var showJoin = document.getElementById('print-col-join').checked;
+            var showJabatan = document.getElementById('print-col-jabatan').checked;
+            var showUmur = document.getElementById('print-col-umur').checked;
+            var showBpjs = document.getElementById('print-col-bpjs').checked;
+            var showGaji = document.getElementById('print-col-gaji').checked;
+
+            // Menyaring hanya karyawan yang masih aktif (is_active === true)
+            var activeKaryawan = db_karyawan.filter(function(k) { 
+                return k.is_active === true; 
+            });
+
+            // Membangun dokumen HTML untuk dicetak secara aman
+            var html = '<html><head><title>Print Data Karyawan</title>';
+            html += '<style>';
+            html += 'body { font-family: "Segoe UI", Arial, sans-serif; padding: 20px; color: #333; }';
+            html += '.header { text-align: center; margin-bottom: 25px; }';
+            html += '.header h2 { margin: 0; color: #1f497d; font-size: 22px; }';
+            html += '.header p { margin: 5px 0 0 0; font-size: 14px; color: #555; }';
+            html += 'table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }';
+            html += 'th { background-color: #1f497d; color: white; border: 1px solid #1f497d; padding: 10px; font-weight: bold; text-align: left; }';
+            html += 'td { border: 1px solid #ccc; padding: 8px 12px; color: #333; }';
+            html += 'tr:nth-child(even) { background-color: #f9fbfd; }';
+            html += '</style></head><body onload="window.print();">';
+            
+            html += '<div class="header">';
+            html += '<h2>Daftar Database Karyawan Aktif</h2>';
+            html += '<p>Suharno 2 Database System</p>';
+            html += '</div>';
+            
+            html += '<table><thead><tr>';
+            if (showId) html += '<th>ID Mesin</th>';
+            if (showJoin) html += '<th>Tanggal Join</th>';
+            html += '<th>Nama Karyawan</th>';
+            if (showJabatan) html += '<th>Jabatan</th>';
+            if (showUmur) html += '<th>Umur</th>';
+            if (showBpjs) html += '<th>Status BPJS</th>';
+            if (showGaji) html += '<th>Gaji Harian Pokok</th>';
+            html += '</tr></thead><tbody>';
+
+            if (activeKaryawan.length === 0) {
+                var colSpan = 1;
+                if (showId) colSpan++;
+                if (showJoin) colSpan++;
+                if (showJabatan) colSpan++;
+                if (showUmur) colSpan++;
+                if (showBpjs) colSpan++;
+                if (showGaji) colSpan++;
+                html += '<tr><td colspan="' + colSpan + '" style="text-align:center;">Tidak ada data karyawan aktif untuk dicetak</td></tr>';
+            } else {
+                var todayDate = new Date();
+                activeKaryawan.forEach(function(emp) {
+                    var umurStr = '-';
+                    if (emp.tanggal_lahir) {
+                        var birthDate = new Date(emp.tanggal_lahir);
+                        var age = todayDate.getFullYear() - birthDate.getFullYear();
+                        var m = todayDate.getMonth() - birthDate.getMonth();
+                        if (m < 0 || (m === 0 && todayDate.getDate() < birthDate.getDate())) age--;
+                        umurStr = age + ' Thn';
+                    }
+
+                    html += '<tr>';
+                    if (showId) html += '<td><strong>' + emp.id + '</strong></td>';
+                    if (showJoin) html += '<td>' + (emp.join_date || '-') + '</td>';
+                    html += '<td><strong>' + emp.name + '</strong></td>';
+                    if (showJabatan) html += '<td>' + (emp.jabatan || '-') + '</td>';
+                    if (showUmur) html += '<td>' + umurStr + '</td>';
+                    if (showBpjs) html += '<td>' + emp.status_bpjs + '</td>';
+                    if (showGaji) html += '<td>' + formatRp(emp.gaji_per_poin_pokok) + '</td>';
+                    html += '</tr>';
+                });
+            }
+
+            html += '</tbody></table></body></html>';
+
+            // Membuka jendela cetak baru
+            var win = window.open('', '_blank');
+            win.document.write(html);
+            win.document.close();
+            closePrintKaryawanModal();
+        };
+
+
+            
             window.filterPayroll = function() {
                 let range = document.getElementById('date-range-payroll').value.split(" to ");
                 if (range.length > 0 && range[0] !== "") { dateRangePayroll.start = range[0]; dateRangePayroll.end = range[1] || range[0]; }
