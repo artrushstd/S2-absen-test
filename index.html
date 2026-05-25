@@ -1538,11 +1538,149 @@
 
             // PRINT FUNCTIONS
             window.printAbsensi = function() {
-                let html = '<html><head><title>Print</title><style>body{font-family:Arial;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:8px;text-align:left}</style></head><body onload="window.print()"><h2>Rekap Absensi '+dateRangeAbsensi.start+' s/d '+dateRangeAbsensi.end+'</h2><table><tr><th>Tanggal</th><th>Nama</th><th>Masuk</th><th>Keluar</th><th>P.Pokok</th><th>P.Ekstra</th></tr>';
-                let fil = db_absensi.filter(function(ab) { return ab.date >= dateRangeAbsensi.start && ab.date <= dateRangeAbsensi.end; });
-                fil.forEach(function(ab) { let e=db_karyawan.find(function(k) { return k.id==ab.emp_id; }); let p=hitungPoinUtuh(ab.clock_in, ab.clock_out, ab.tipe_hari); html+='<tr><td>'+ab.date+'</td><td>'+(e?e.name:ab.emp_id)+'</td><td>'+(ab.clock_in||'-')+'</td><td>'+(ab.clock_out||'-')+'</td><td>'+p.pokok+'</td><td>'+p.ekstra+'</td></tr>'; });
-                window.open('','_blank').document.write(html+"</table></body></html>");
-            };
+            // Helper untuk mengonversi waktu HH:MM:SS ke detik murni
+            function parseTimeToSeconds(timeStr) {
+                if (!timeStr) return 0;
+                let parts = timeStr.split(':');
+                let h = parseInt(parts[0], 10) || 0;
+                let m = parseInt(parts[1], 10) || 0;
+                let s = parts[2] ? parseInt(parts[2], 10) : 0;
+                return h * 3600 + m * 60 + s;
+            }
+
+            let html = `
+                <html>
+                <head>
+                    <title>Print Absensi</title>
+                    <style>
+                        body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; color: #333; }
+                        .header { text-align: center; margin-bottom: 25px; }
+                        .header h2 { margin: 0; color: #1f497d; font-size: 22px; }
+                        .header p { margin: 5px 0 0 0; font-size: 14px; color: #555; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
+                        th { background-color: #1f497d; color: white; border: 1px solid #1f497d; padding: 10px; font-weight: bold; text-align: center; }
+                        td { border: 1px solid #ccc; padding: 8px 12px; color: #333; }
+                        tr:nth-child(even) { background-color: #f9fbfd; }
+                        .text-center { text-align: center; }
+                    </style>
+                </head>
+                <body onload="window.print();">
+                    <div class="header">
+                        <h2>Laporan Rekap Absensi Karyawan</h2>
+                        <p>Periode: ${dateRangeAbsensi.start} s/d ${dateRangeAbsensi.end}</p>
+                        ${currentAbsensiFilterName ? `<p>Filter Karyawan: ${currentAbsensiFilterName}</p>` : ''}
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Tanggal</th>
+                                <th>Nama</th>
+                                <th>Jam Masuk</th>
+                                <th>Jam Pulang</th>
+                                <th>Total Jam Kerja</th>
+                                <th>Status</th>
+                                <th>Catatan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            // 1. Saring data absensi berdasarkan filter tanggal & nama karyawan terpilih
+            let filtered = db_absensi.filter(function(ab) {
+                let emp = db_karyawan.find(function(k) { return k.id == ab.emp_id; });
+                let passName = currentAbsensiFilterName && emp ? emp.name === currentAbsensiFilterName : true;
+                return passName && ab.date >= dateRangeAbsensi.start && ab.date <= dateRangeAbsensi.end;
+            });
+
+            // 2. Kelompokkan absensi berdasarkan ID Karyawan (emp_id) agar baris catatan bisa di-rowspan
+            let grouped = {};
+            filtered.forEach(function(ab) {
+                let empId = ab.emp_id;
+                if (!grouped[empId]) {
+                    grouped[empId] = [];
+                }
+                grouped[empId].push(ab);
+            });
+
+            // Konversi objek grup ke array dan urutkan nama karyawan secara alfabetis
+            let groupList = [];
+            Object.keys(grouped).forEach(function(empId) {
+                let emp = db_karyawan.find(function(k) { return k.id == empId; });
+                let empName = emp ? emp.name : 'ID ' + empId;
+                
+                // Urutkan riwayat tanggal absen masing-masing karyawan secara Ascending (Terlama ke Terbaru)
+                grouped[empId].sort(function(a, b) {
+                    return new Date(a.date) - new Date(b.date);
+                });
+                
+                groupList.push({
+                    empId: empId,
+                    empName: empName,
+                    records: grouped[empId]
+                });
+            });
+
+            groupList.sort(function(a, b) {
+                return a.empName.toLowerCase().localeCompare(b.empName.toLowerCase());
+            });
+
+            // 3. Render Baris Tabel dengan logika rowspan pada kolom Catatan (PIN Mesin)
+            if(groupList.length === 0) {
+                html += `<tr><td colspan="7" class="text-center">Tidak ada data absensi untuk dicetak</td></tr>`;
+            } else {
+                groupList.forEach(function(group) {
+                    let rowSpan = group.records.length;
+                    
+                    group.records.forEach(function(ab, index) {
+                        let jamMasuk = ab.clock_in;
+                        let jamKeluar = ab.clock_out;
+                        let totalKerjaStr = "";
+                        let statusVal = 2; // Default 2: Belum Absen Pulang
+
+                        if (jamMasuk && jamKeluar) {
+                            statusVal = 1; // 1: Absensi Lengkap (Masuk & Pulang)
+                            
+                            // Hitung selisih waktu presisi hingga detik murni
+                            let secIn = parseTimeToSeconds(jamMasuk);
+                            let secOut = parseTimeToSeconds(jamKeluar);
+                            if (secOut < secIn) secOut += 24 * 3600; // Antisipasi shift lewat tengah malam
+                            
+                            let diffSecs = secOut - secIn;
+                            let hrs = Math.floor(diffSecs / 3600);
+                            let mins = Math.floor((diffSecs % 3600) / 60);
+                            let secs = diffSecs % 60;
+                            
+                            let parts = [];
+                            if (hrs > 0) parts.push(hrs + " Jam");
+                            if (mins > 0) parts.push(mins + " Menit");
+                            if (secs > 0) parts.push(secs + " Detik");
+                            totalKerjaStr = parts.join(" ");
+                        }
+
+                        html += `<tr>
+                            <td>${ab.date}</td>
+                            <td>${group.empName}</td>
+                            <td class="text-center">${jamMasuk || "-:-"}</td>
+                            <td class="text-center">${jamKeluar || "-:-"}</td>
+                            <td>${totalKerjaStr}</td>
+                            <td class="text-center" style="font-weight:bold;">${statusVal}</td>
+                        `;
+
+                        // Hanya render kolom Catatan (rowspan ID Mesin) pada baris pertama masing-masing karyawan
+                        if (index === 0) {
+                            html += `<td rowspan="${rowSpan}" class="text-center" style="vertical-align: middle; font-weight:bold; background:#fff;">${group.empId}</td>`;
+                        }
+
+                        html += `</tr>`;
+                    });
+                });
+            }
+
+            html += `</tbody></table></body></html>`;
+            let win = window.open('', '_blank');
+            win.document.write(html);
+            win.document.close();
+        };
             window.printPayroll = function() {
                 let startD = new Date(dateRangePayroll.start); let endD = new Date(dateRangePayroll.end);
                 let isBpjsMonth = false; for(let d=new Date(startD); d<=endD; d.setDate(d.getDate()+1)) { if(d.getDate()===10){ isBpjsMonth=true; break; } }
