@@ -1661,16 +1661,6 @@
 
             // PRINT FUNCTIONS
             window.printAbsensi = function() {
-            // Helper untuk mengonversi waktu HH:MM:SS ke detik murni
-            function parseTimeToSeconds(timeStr) {
-                if (!timeStr) return 0;
-                let parts = timeStr.split(':');
-                let h = parseInt(parts[0], 10) || 0;
-                let m = parseInt(parts[1], 10) || 0;
-                let s = parts[2] ? parseInt(parts[2], 10) : 0;
-                return h * 3600 + m * 60 + s;
-            }
-
             let html = `
                 <html>
                 <head>
@@ -1700,9 +1690,10 @@
                                 <th>Nama</th>
                                 <th>Jam Masuk</th>
                                 <th>Jam Pulang</th>
-                                <th>Total Jam Kerja</th>
-                                <th>Status</th>
-                                <th>Catatan</th>
+                                <th>Total Jam Pokok</th>
+                                <th>Total Jam Extra</th>
+                                <th>Poin Pokok</th>
+                                <th>Poin Extra</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1715,87 +1706,45 @@
                 return passName && ab.date >= dateRangeAbsensi.start && ab.date <= dateRangeAbsensi.end;
             });
 
-            // 2. Kelompokkan absensi berdasarkan ID Karyawan (emp_id) agar baris catatan bisa di-rowspan
-            let grouped = {};
-            filtered.forEach(function(ab) {
-                let empId = ab.emp_id;
-                if (!grouped[empId]) {
-                    grouped[empId] = [];
+            // 2. Urutkan berdasarkan nama karyawan secara alfabetis, lalu berdasarkan tanggal (terlama ke terbaru)
+            filtered.sort(function(a, b) {
+                let empA = db_karyawan.find(function(k) { return k.id == a.emp_id; });
+                let empB = db_karyawan.find(function(k) { return k.id == b.emp_id; });
+                let nameA = empA ? empA.name.toLowerCase() : '';
+                let nameB = empB ? empB.name.toLowerCase() : '';
+                
+                if (nameA !== nameB) {
+                    return nameA.localeCompare(nameB);
                 }
-                grouped[empId].push(ab);
+                return new Date(a.date) - new Date(b.date);
             });
 
-            // Konversi objek grup ke array dan urutkan nama karyawan secara alfabetis
-            let groupList = [];
-            Object.keys(grouped).forEach(function(empId) {
-                let emp = db_karyawan.find(function(k) { return k.id == empId; });
-                let empName = emp ? emp.name : 'ID ' + empId;
-                
-                // Urutkan riwayat tanggal absen masing-masing karyawan secara Ascending (Terlama ke Terbaru)
-                grouped[empId].sort(function(a, b) {
-                    return new Date(a.date) - new Date(b.date);
-                });
-                
-                groupList.push({
-                    empId: empId,
-                    empName: empName,
-                    records: grouped[empId]
-                });
-            });
-
-            groupList.sort(function(a, b) {
-                return a.empName.toLowerCase().localeCompare(b.empName.toLowerCase());
-            });
-
-            // 3. Render Baris Tabel dengan logika rowspan pada kolom Catatan (PIN Mesin)
-            if(groupList.length === 0) {
-                html += `<tr><td colspan="7" class="text-center">Tidak ada data absensi untuk dicetak</td></tr>`;
+            // 3. Render tabel dengan kolom baru
+            if(filtered.length === 0) {
+                html += `<tr><td colspan="8" class="text-center">Tidak ada data absensi untuk dicetak</td></tr>`;
             } else {
-                groupList.forEach(function(group) {
-                    let rowSpan = group.records.length;
+                filtered.forEach(function(ab) {
+                    let emp = db_karyawan.find(function(k) { return k.id == ab.emp_id; });
+                    let empName = emp ? emp.name : 'ID ' + ab.emp_id;
+                    let tHari = ab.tipe_hari || (ab.is_weekend ? 'Weekend' : 'Weekday');
+                    let p = hitungPoinUtuh(ab.clock_in, ab.clock_out, tHari);
                     
-                    group.records.forEach(function(ab, index) {
-                        let jamMasuk = ab.clock_in;
-                        let jamKeluar = ab.clock_out;
-                        let totalKerjaStr = "";
-                        let statusVal = 2; // Default 2: Belum Absen Pulang
+                    // Rekonstruksi jam kerja normal (pokok) secara matematis berdasarkan jenis harinya
+                    let isWknd = (tHari === 'Weekend' || tHari === 'Libur');
+                    let jamNormal = isWknd ? (p.pokok * 6.25) : (p.pokok * 9.0);
 
-                        if (jamMasuk && jamKeluar) {
-                            statusVal = 1; // 1: Absensi Lengkap (Masuk & Pulang)
-                            
-                            // Hitung selisih waktu presisi hingga detik murni
-                            let secIn = parseTimeToSeconds(jamMasuk);
-                            let secOut = parseTimeToSeconds(jamKeluar);
-                            if (secOut < secIn) secOut += 24 * 3600; // Antisipasi shift lewat tengah malam
-                            
-                            let diffSecs = secOut - secIn;
-                            let hrs = Math.floor(diffSecs / 3600);
-                            let mins = Math.floor((diffSecs % 3600) / 60);
-                            let secs = diffSecs % 60;
-                            
-                            let parts = [];
-                            if (hrs > 0) parts.push(hrs + " Jam");
-                            if (mins > 0) parts.push(mins + " Menit");
-                            if (secs > 0) parts.push(secs + " Detik");
-                            totalKerjaStr = parts.join(" ");
-                        }
+                    let dayName = new Date(ab.date).toLocaleDateString('id-ID', { weekday: 'long' });
 
-                        html += `<tr>
-                            <td>${ab.date}</td>
-                            <td>${group.empName}</td>
-                            <td class="text-center">${jamMasuk || "-:-"}</td>
-                            <td class="text-center">${jamKeluar || "-:-"}</td>
-                            <td>${totalKerjaStr}</td>
-                            <td class="text-center" style="font-weight:bold;">${statusVal}</td>
-                        `;
-
-                        // Hanya render kolom Catatan (rowspan ID Mesin) pada baris pertama masing-masing karyawan
-                        if (index === 0) {
-                            html += `<td rowspan="${rowSpan}" class="text-center" style="vertical-align: middle; font-weight:bold; background:#fff;">${group.empId}</td>`;
-                        }
-
-                        html += `</tr>`;
-                    });
+                    html += `<tr>
+                        <td>${dayName}, ${ab.date}</td>
+                        <td>${empName}</td>
+                        <td class="text-center">${ab.clock_in || "-:-"}</td>
+                        <td class="text-center">${ab.clock_out || "-:-"}</td>
+                        <td>${formatHours(jamNormal)}</td>
+                        <td>${formatHours(p.lemburTotal)}</td>
+                        <td class="text-center" style="font-weight:bold;">${Number(p.pokok.toFixed(5))}</td>
+                        <td class="text-center" style="font-weight:bold;">${Number(p.ekstra.toFixed(5))}</td>
+                    </tr>`;
                 });
             }
 
