@@ -740,7 +740,20 @@
                     let { data: karyawan } = await supabaseApp.from('karyawan').select('*').order('id', { ascending: true });
                     if(karyawan) db_karyawan = karyawan;
                     let { data: absensi } = await supabaseApp.from('absensi').select('*');
-                    if(absensi) db_absensi = absensi;
+                    if(absensi) {
+                        // Override langsung di HTML agar hari Sabtu selalu dibaca sebagai Weekday oleh sistem
+                        absensi.forEach(function(ab) {
+                            if (ab.date) {
+                                var d = new Date(ab.date + "T00:00:00");
+                                if (d.getDay() === 6 && !ab.tipe_hari) { 
+                                    // Jika hari Sabtu (6) dan belum diubah manual (seperti Libur), paksa jadi Weekday
+                                    ab.is_weekend = false;
+                                    ab.tipe_hari = 'Weekday';
+                                }
+                            }
+                        });
+                        db_absensi = absensi;
+                    }
                     let { data: bonus } = await supabaseApp.from('bonus').select('*');
                     if(bonus) {
                         db_bonus = {}; bonus.forEach(function(b) { db_bonus[b.emp_id_period] = b; });
