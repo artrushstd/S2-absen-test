@@ -201,10 +201,6 @@
             
             <form id="form-login" onsubmit="handleLogin(event)">
                 <div class="form-group">
-                    <label>ID / Username</label>
-                    <input type="text" id="login-id" placeholder="Masukkan ID (Bebas)" autocomplete="off">
-                </div>
-                <div class="form-group">
                     <label>Password / Kode Akses</label>
                     <input type="password" id="login-password" placeholder="Masukkan Password" required>
                 </div>
@@ -730,7 +726,7 @@
             window.logout = function() {
                 try { sessionStorage.removeItem('auth_user'); } catch(e){}
                 document.getElementById('login-screen').classList.remove('hidden'); document.getElementById('app-wrapper').classList.add('hidden');
-                document.getElementById('login-password').value = ''; document.getElementById('login-id').value = '';
+                document.getElementById('login-password').value = ''; 
             };
 
             async function fetchDataSupabase() {
