@@ -774,35 +774,60 @@
             }
 
             function hitungPoinUtuh(jamMasuk, jamKeluar, tipeHari) {
-                if(!jamMasuk || !jamKeluar) return { pokok: 0, ekstra: 0, lateness: 0, lemburTotal: 0, shiftName: '-' };
-                let inH = parseInt(jamMasuk.split(':')[0]) + parseInt(jamMasuk.split(':')[1])/60;
-                let outH = parseInt(jamKeluar.split(':')[0]) + parseInt(jamKeluar.split(':')[1])/60;
-                if (outH < inH) outH += 24; 
-                
-                let shift = getShiftDetails(jamMasuk, tipeHari);
-                
-                let effectiveInNormal = inH;
-                if (inH > shift.start && inH <= shift.start + 0.25) effectiveInNormal = shift.start; 
+            if(!jamMasuk || !jamKeluar) return { pokok: 0, ekstra: 0, lateness: 0, lemburTotal: 0, shiftName: '-' };
+            let inH = parseInt(jamMasuk.split(':')[0]) + parseInt(jamMasuk.split(':')[1])/60;
+            let outH = parseInt(jamKeluar.split(':')[0]) + parseInt(jamKeluar.split(':')[1])/60;
+            if (outH < inH) outH += 24; 
+            
+            let shift = getShiftDetails(jamMasuk, tipeHari);
+            let effectiveInNormal = inH;
+            
+            // Toleransi 10 menit keterlambatan
+            if (inH > shift.start && inH <= shift.start + (10/60)) effectiveInNormal = shift.start; 
 
-                let lateness = Math.max(0, effectiveInNormal - shift.start);
-                let startNormal = Math.max(effectiveInNormal, shift.start);
-                let endNormal = Math.min(outH, shift.end);
-                let jamNormal = Math.max(0, endNormal - startNormal);
+            let lateness = Math.max(0, effectiveInNormal - shift.start);
+            let startNormal = Math.max(effectiveInNormal, shift.start);
+            let endNormal = Math.min(outH, shift.end);
+            let jamNormal = Math.max(0, endNormal - startNormal);
 
-                let lemburBefore = Math.max(0, shift.start - inH);
-                let lemburAfter = Math.max(0, outH - shift.end);
-                let totalLembur = lemburBefore + lemburAfter;
-                if (totalLembur < 1.0) totalLembur = 0;
+            let lemburBefore = Math.max(0, shift.start - inH);
+            let lemburAfter = Math.max(0, outH - shift.end);
+            let totalLembur = lemburBefore + lemburAfter;
+            
+            // Minimal lembur 1 jam (kurang dari itu hangus)
+            if (totalLembur < 1.0) totalLembur = 0;
 
-                let isWknd = (tipeHari === 'Weekend' || tipeHari === 'Libur' || tipeHari === true);
-                let poinPokok = isWknd ? (jamNormal / 12.5) * 2 : (jamNormal / 9.0);
-                let poinEkstra = totalLembur; 
+            let isWknd = (tipeHari === 'Weekend' || tipeHari === 'Libur' || tipeHari === true);
+            let poinPokok = isWknd ? (jamNormal / 12.5) * 2 : (jamNormal / 9.0);
+            let poinEkstra = totalLembur; 
 
-                return { 
-                    pokok: Number(poinPokok.toFixed(5)), ekstra: Number(poinEkstra.toFixed(5)), 
-                    lateness: lateness, lemburBefore: lemburBefore, lemburAfter: lemburAfter, lemburTotal: totalLembur, shiftName: shift.name 
-                };
+            // ========================================================
+            // REVISI ATURAN BARU: LEMBUR KHUSUS WEEKDAY
+            // ========================================================
+            if (!isWknd) {
+                if (totalLembur > 4.0) {
+                    // ATURAN 3: Lembur > 4 jam
+                    poinPokok += 1.0;   // Tambahkan +1 Poin Pokok
+                    poinEkstra = 0.0;   // Poin Ekstra diubah menjadi 0 (tidak dihitung)
+                    totalLembur = 4.0;  // Batasi tampilan jam lembur maksimal 4 jam untuk validasi tabel
+                } else {
+                    // ATURAN 1 & 2: Lembur <= 4 jam
+                    poinEkstra = totalLembur; // Dihitung normal sebagai Poin Ekstra
+                    // Poin pokok tidak berubah
+                }
             }
+            // ========================================================
+
+            return { 
+                pokok: Number(poinPokok.toFixed(2)), 
+                ekstra: Number(poinEkstra.toFixed(2)), 
+                lateness: lateness, 
+                lemburBefore: lemburBefore, 
+                lemburAfter: lemburAfter, 
+                lemburTotal: totalLembur, 
+                shiftName: shift.name 
+            };
+        }
 
             window.applyDashboardFilter = function() {
                 filterDashboard.date = document.getElementById('dash-filter-date').value || todayStr;
