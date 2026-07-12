@@ -921,8 +921,11 @@
 
         // --- SISTEM PERHITUNGAN SHIFT & POIN ---
         function getShiftDetails(jamMasuk, tipeHari) {
+            // "Full Shift" HANYA berlaku untuk hari Minggu (Weekend) dan Hari Libur
             let isWknd = (tipeHari === 'Weekend' || tipeHari === 'Libur' || tipeHari === true);
-            if(isWknd) return { name: 'Full Shift', start: 7.0, end: 19.5 };
+            if (isWknd) return { name: 'Full Shift', start: 7.0, end: 19.5 };
+
+            // Selain itu (Senin - Sabtu) menggunakan Shift Normal (Pagi/Middle/Siang)
             let h = parseInt(jamMasuk.split(':')[0]) + parseInt(jamMasuk.split(':')[1])/60;
             if (h <= 8.5) return { name: 'Pagi', start: 7.0, end: 16.0 };
             if (h <= 11.5) return { name: 'Middle', start: 10.0, end: 19.0 };
@@ -938,7 +941,7 @@
             let shift = getShiftDetails(jamMasuk, tipeHari);
             let effectiveInNormal = inH;
             
-            // Toleransi 10 menit keterlambatan
+            // Toleransi 10 menit
             if (inH > shift.start && inH <= shift.start + (10/60)) effectiveInNormal = shift.start; 
 
             let lateness = Math.max(0, effectiveInNormal - shift.start);
@@ -949,30 +952,24 @@
             let lemburBefore = Math.max(0, shift.start - inH);
             let lemburAfter = Math.max(0, outH - shift.end);
             let totalLembur = lemburBefore + lemburAfter;
-            
-            // Minimal lembur 1 jam (kurang dari itu hangus)
             if (totalLembur < 1.0) totalLembur = 0;
 
             let isWknd = (tipeHari === 'Weekend' || tipeHari === 'Libur' || tipeHari === true);
+            
+            // KEMBALIKAN PEMBAGI 12.5 UNTUK FULL SHIFT AGAR PAS DAPAT 2 POIN
             let poinPokok = isWknd ? (jamNormal / 12.5) * 2 : (jamNormal / 9.0);
             let poinEkstra = totalLembur; 
 
-            // ========================================================
-            // REVISI ATURAN BARU: LEMBUR KHUSUS WEEKDAY
-            // ========================================================
+            // ATURAN LEMBUR KHUSUS WEEKDAY (SENIN - SABTU)
             if (!isWknd) {
                 if (totalLembur > 4.0) {
-                    // ATURAN 3: Lembur > 4 jam
-                    poinPokok += 1.0;   // Tambahkan +1 Poin Pokok
-                    poinEkstra = 0.0;   // Poin Ekstra diubah menjadi 0 (tidak dihitung)
-                    totalLembur = 4.0;  // Batasi tampilan jam lembur maksimal 4 jam untuk validasi tabel
+                    poinPokok += 1.0;   
+                    poinEkstra = 0.0;   
+                    totalLembur = 4.0;  
                 } else {
-                    // ATURAN 1 & 2: Lembur <= 4 jam
-                    poinEkstra = totalLembur; // Dihitung normal sebagai Poin Ekstra
-                    // Poin pokok tidak berubah
+                    poinEkstra = totalLembur; 
                 }
             }
-            // ========================================================
 
             return { 
                 pokok: Number(poinPokok.toFixed(2)), 
@@ -1515,7 +1512,7 @@
                 let pEkstra = b.poin_ekstra_override !== null && b.poin_ekstra_override !== undefined ? b.poin_ekstra_override : data.ekstra;
                 let gPokok = b.gaji_pokok_override !== null && b.gaji_pokok_override !== undefined ? b.gaji_pokok_override : (pPokok * emp.gaji_per_poin_pokok);
                 let gEkstra = (emp.gaji_per_poin_pokok||0) * ((pEkstra / 8) * 2); let gBonus = b.nominal || ((b.poin || 0) * (emp.gaji_per_poin_pokok||0));
-                mPayPokok += gPokok; mPayLembur += gEkstra; mPayBonus += gBonus; if(emp.status_bpjs === 'Aktif' && isBpjsDeductible) potBpjsTot += 50000;
+                mPayPokok += gPokok; mPayLembur += gEkstra; mPayBonus += gBonus; if(emp.status_bpjs === 'Aktif' && isBpjsDeductible) potBpjsTot += 55000;
             });
             let mNetPay = mPayPokok + mPayLembur + mPayBonus - potBpjsTot;
             document.getElementById('dash-est-payroll').innerText = formatRp(mNetPay);
@@ -1930,7 +1927,7 @@
                 let gPokok = b.gaji_pokok_override !== null && b.gaji_pokok_override !== undefined ? b.gaji_pokok_override : (pPokok * e.gaji_per_poin_pokok);
                 let gLembur = e.gaji_per_poin_pokok * ((pEkstra / 8) * 2);
                 let gBonus = b.nominal || (pBonus * e.gaji_per_poin_pokok);
-                let potBpjs = (e.status_bpjs === 'Aktif' && isBpjsMonth) ? 50000 : 0;
+                let potBpjs = (e.status_bpjs === 'Aktif' && isBpjsMonth) ? 55000 : 0;
                 let totGaji = gPokok + gLembur + gBonus - potBpjs;
                 return { e, data, pPokok, pEkstra, pBonus, gPokok, gLembur, gBonus, potBpjs, totGaji };
             });
@@ -2328,7 +2325,7 @@
                     let gPokok = (b.gaji_pokok_override !== null && b.gaji_pokok_override !== undefined) ? b.gaji_pokok_override : (pPokok * e.gaji_per_poin_pokok); 
                     let gLembur = e.gaji_per_poin_pokok * ((pEkstra / 8) * 2); 
                     let gBonus = b.nominal || (pBonus * e.gaji_per_poin_pokok); 
-                    let potBpjs = (e.status_bpjs === 'Aktif' && isBpjsMonth) ? 50000 : 0; 
+                    let potBpjs = (e.status_bpjs === 'Aktif' && isBpjsMonth) ? 55000 : 0; 
                     
                     // Perhitungan di level Slip Karyawan (Take Home Pay = Gross - BPJS)
                     let totGajiSlip = gPokok + gLembur + gBonus - potBpjs; 
