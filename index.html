@@ -489,15 +489,12 @@
             <div style="display: flex; gap: 16px;">
                 <div class="form-group" style="flex: 1;">
                     <label>Tanggal Absensi</label>
-                    <input type="date" id="manual-abs-date" class="input-control" style="width: 100%;">
+                    <input type="date" id="manual-abs-date" class="input-control" style="width: 100%;" onchange="updatePreviewAbsensi()">
                 </div>
                 <div class="form-group" style="flex: 1;">
-                    <label>Tipe Hari</label>
-                    <select id="manual-abs-tipe" class="input-control" style="width: 100%;" onchange="updatePreviewAbsensi()">
-                        <option value="Weekday">Weekday</option>
-                        <option value="Weekend">Weekend</option>
-                        <option value="Libur">Hari Libur</option>
-                    </select>
+                    <label>Tipe Hari (Otomatis)</label>
+                    <!-- Kotak ini otomatis terisi dan terkunci (readonly) -->
+                    <input type="text" id="manual-abs-tipe-display" class="input-control" style="width: 100%; background: var(--hover-bg); font-weight: bold; color: var(--primary);" readonly>
                 </div>
             </div>
             <div style="display: flex; gap: 16px;">
@@ -1728,15 +1725,34 @@
 
         // ================== FITUR ABSENSI MANUAL ==================
         
+        // Fungsi baru untuk membaca tipe hari secara otomatis (sama persis dengan kalender)
+        function getTipeHariByDate(dateStr) {
+            if(!dateStr) return 'Weekday';
+            let override = db_kalender.find(k => k.tanggal === dateStr);
+            if (override) {
+                return override.tipe_hari;
+            } else {
+                let parts = dateStr.split('-');
+                let d = new Date(parts[0], parts[1] - 1, parts[2]);
+                return (d.getDay() === 0) ? 'Weekend' : 'Weekday'; // 0 = Minggu
+            }
+        }
+
         // 1. Fungsi Update Preview Kalkulasi Real-time
         window.updatePreviewAbsensi = function() {
+            let dateVal = document.getElementById('manual-abs-date').value;
             let cin = document.getElementById('manual-abs-in').value;
             let cout = document.getElementById('manual-abs-out').value;
-            let tipe = document.getElementById('manual-abs-tipe').value;
+            
+            // Cek otomatis tipe hari
+            let tipeOtomatis = getTipeHariByDate(dateVal);
+            
+            // Tampilkan tipe harinya ke kotak display di layar agar Admin tahu
+            let displayEl = document.getElementById('manual-abs-tipe-display');
+            if (displayEl) displayEl.value = tipeOtomatis;
             
             if (cin && cout) {
-                // Menggunakan fungsi hitungPoinUtuh bawaan sistem Anda
-                let p = hitungPoinUtuh(cin, cout, tipe);
+                let p = hitungPoinUtuh(cin, cout, tipeOtomatis);
                 document.getElementById('preview-pokok').innerText = p.pokok.toFixed(2);
                 document.getElementById('preview-ekstra').innerText = p.ekstra.toFixed(2);
             } else {
@@ -1750,7 +1766,6 @@
             let sel = document.getElementById('manual-abs-emp');
             sel.innerHTML = '<option value="">-- Pilih Karyawan --</option>';
             
-            // Hanya tampilkan karyawan Aktif dan Tidak Aktif (Karyawan Resign diblokir dari sistem absen)
             db_karyawan.filter(k => {
                 let st = k.status_kerja || (k.is_active ? 'Aktif' : 'Resign');
                 return st !== 'Resign';
@@ -1758,14 +1773,14 @@
                 sel.innerHTML += '<option value="'+e.id+'">'+e.name+' (ID: '+e.id+')</option>';
             });
             
-            // Reset Form
-            let todayLocal = new Date().toISOString().split('T')[0];
-            document.getElementById('manual-abs-date').value = todayLocal;
+            // Reset Form (menggunakan variabel todayStr global)
+            document.getElementById('manual-abs-date').value = todayStr;
             document.getElementById('manual-abs-in').value = '';
             document.getElementById('manual-abs-out').value = '';
-            document.getElementById('manual-abs-tipe').value = 'Weekday';
             document.getElementById('manual-abs-ket').value = '';
-            updatePreviewAbsensi();
+            
+            // Panggil update preview agar 'Tipe Hari' langsung terbaca otomatis saat form dibuka
+            updatePreviewAbsensi(); 
             
             document.getElementById('modal-tambah-absensi').style.display = 'flex';
         };
@@ -1783,7 +1798,6 @@
             if(!empId || !date || !cin) {
                 return alert("Harap isi Karyawan, Tanggal, dan Jam Masuk terlebih dahulu!");
             }
-            
             document.getElementById('modal-confirm-absensi').style.display = 'flex';
         };
         
@@ -1801,7 +1815,9 @@
             let date = document.getElementById('manual-abs-date').value;
             let cin = document.getElementById('manual-abs-in').value;
             let cout = document.getElementById('manual-abs-out').value || null;
-            let tipe = document.getElementById('manual-abs-tipe').value;
+            
+            // TENTUKAN TIPE HARI OTOMATIS SAAT DISIMPAN
+            let tipe = getTipeHariByDate(date);
             let is_weekend = (tipe === 'Weekend' || tipe === 'Libur');
         
             // Buat Payload Data
@@ -1814,12 +1830,10 @@
                 tipe_hari: tipe
             };
         
-            // Cek apakah di tanggal ini karyawan sudah punya data absensi
             let existing = db_absensi.find(a => a.emp_id === empId && a.date === date);
             let errorObj = null;
         
             if (existing) {
-                // UPDATE data jika sudah absen
                 const { error } = await supabaseApp.from('absensi').update(payload).eq('id', existing.id);
                 errorObj = error;
                 if (!error) {
@@ -1829,7 +1843,6 @@
                     existing.tipe_hari = payload.tipe_hari;
                 }
             } else {
-                // INSERT data baru jika belum absen
                 const { data, error } = await supabaseApp.from('absensi').insert([payload]).select();
                 errorObj = error;
                 if (!error && data.length > 0) {
@@ -1838,7 +1851,6 @@
             }
         
             if (!errorObj) {
-                // Berhasil Tersimpan, segarkan semua tabel yang berkaitan
                 renderAbsensi();
                 renderPayroll();
                 renderDashboard();
