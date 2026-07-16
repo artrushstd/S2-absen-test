@@ -935,10 +935,16 @@
             initTheme();
             if (typeof flatpickr !== 'undefined') {
                 const fpConfig = { mode: "range", dateFormat: "Y-m-d", onOpen: function(selectedDates, dateStr, instance) { instance.clear(); let d = new Date(); instance.setDate([new Date(d.getFullYear(), d.getMonth(), 1), new Date(d.getFullYear(), d.getMonth() + 1, 0)], false); } };
-                flatpickr("#date-range-absensi", fpConfig); flatpickr("#date-range-payroll", fpConfig);
+                
+                flatpickr("#date-range-absensi", fpConfig); 
+                flatpickr("#date-range-payroll", fpConfig);
+                flatpickr("#date-range-performa", fpConfig); // <-- INI YANG DITAMBAHKAN
+                
                 flatpickr("#dash-filter-date", { dateFormat: "Y-m-d", defaultDate: todayStr });
+                
                 document.getElementById('date-range-absensi').value = todayStr + " to " + todayStr;
                 document.getElementById('date-range-payroll').value = firstDay + " to " + todayStr;
+                document.getElementById('date-range-performa').value = firstDay + " to " + todayStr; // <-- INI YANG DITAMBAHKAN
             }
             let savedUser = null; try { savedUser = sessionStorage.getItem('auth_user'); } catch(e) {}
             if (savedUser) { showApp(JSON.parse(savedUser)); } else { document.getElementById('login-screen').classList.remove('hidden'); document.getElementById('app-wrapper').classList.add('hidden'); }
@@ -2216,7 +2222,7 @@
 
 
         // ================== LOGIC PERFORMA KARYAWAN ==================
-        let dateRangePerforma = { start: todayStr, end: todayStr };
+        let dateRangePerforma = { start: firstDay, end: todayStr };
         let performaSortColumn = 'poin';
         let performaSortOrder = 'desc';
 
