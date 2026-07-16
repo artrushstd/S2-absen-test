@@ -216,6 +216,7 @@
                 <li class="nav-item" onclick="switchPage('absensi', this)"><i class="fa-solid fa-calendar-check"></i> Absensi</li>
                 <li class="nav-item" onclick="switchPage('payroll', this)"><i class="fa-solid fa-file-invoice-dollar"></i> Payroll</li>
                 <li class="nav-item" onclick="switchPage('kasbon', this)"><i class="fa-solid fa-money-check-dollar"></i> Kasbon Karyawan</li>
+                <li class="nav-item" onclick="switchPage('performa', this)"><i class="fa-solid fa-chart-line"></i> Performa</li>
             </ul>
         </nav>
 
@@ -464,6 +465,70 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- ================== PAGE: PERFORMA ================== -->
+                <div id="page-performa" class="hidden">
+                    <div class="card">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h3 class="card-title" style="margin-bottom: 0;">Laporan Performa Karyawan</h3>
+                        </div>
+                        <div class="search-wrapper">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="search-performa" class="input-control" placeholder="Cari nama karyawan..." oninput="handleSearchInput('performa')">
+                            <i class="fa-solid fa-xmark" id="clear-performa" onclick="clearSearch('performa')"></i>
+                        </div>
+                        <div class="filter-bar">
+                            <input type="text" id="date-range-performa" class="input-control" placeholder="Pilih Range Tanggal...">
+                            <button class="btn btn-primary" onclick="filterPerforma()"><i class="fa-solid fa-filter"></i> Filter</button>
+                        </div>
+                        <div class="summary-box">
+                            <div><strong>Total Berangkat:</strong> <span id="perf-tot-berangkat">0</span></div>
+                            <div><strong>Total Izin/Sakit:</strong> <span id="perf-tot-izinsakit">0</span></div>
+                            <div><strong>Total Alfa:</strong> <span id="perf-tot-alfa">0</span></div>
+                            <div><strong>Rata-rata Poin Performa:</strong> <span id="perf-avg-poin">0</span></div>
+                        </div>
+                        <div class="table-container">
+                            <table id="table-performa">
+                                <thead>
+                                    <tr>
+                                        <th onclick="toggleSortPerforma('name')" style="cursor: pointer;">Nama <i id="sort-perf-name" class="fa-solid fa-sort"></i></th>
+                                        <th onclick="toggleSortPerforma('berangkat')" style="cursor: pointer;">Berangkat <i id="sort-perf-berangkat" class="fa-solid fa-sort"></i></th>
+                                        <th onclick="toggleSortPerforma('izin')" style="cursor: pointer;">Izin <i id="sort-perf-izin" class="fa-solid fa-sort"></i></th>
+                                        <th onclick="toggleSortPerforma('sakit')" style="cursor: pointer;">Sakit <i id="sort-perf-sakit" class="fa-solid fa-sort"></i></th>
+                                        <th onclick="toggleSortPerforma('alfa')" style="cursor: pointer;">Alfa <i id="sort-perf-alfa" class="fa-solid fa-sort"></i></th>
+                                        <th onclick="toggleSortPerforma('telat')" style="cursor: pointer;">Keterlambatan <i id="sort-perf-telat" class="fa-solid fa-sort"></i></th>
+                                        <th onclick="toggleSortPerforma('lembur')" style="cursor: pointer;">Tot. Lembur <i id="sort-perf-lembur" class="fa-solid fa-sort"></i></th>
+                                        <th onclick="toggleSortPerforma('poin')" style="cursor: pointer;">Poin Performa <i id="sort-perf-poin" class="fa-solid fa-sort"></i></th>
+                                    </tr>
+                                </thead>
+                                <tbody><tr><td colspan="8" class="text-center">Memuat data...</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Detail Performa (Izin/Sakit/Alfa) -->
+                <div id="modal-detail-performa" class="modal" style="z-index:105;">
+                    <div class="modal-content" style="width: 700px; max-width: 95%;">
+                        <div class="modal-header">
+                            <span id="detail-performa-title">Detail Absensi Khusus (Izin/Sakit/Alfa)</span>
+                            <i class="fa-solid fa-times" style="cursor:pointer;" onclick="closeDetailPerformaModal()"></i>
+                        </div>
+                        <div class="table-container" style="max-height: 400px; overflow-y:auto;">
+                            <table id="table-detail-performa">
+                                <thead>
+                                    <tr>
+                                        <th>Tanggal</th>
+                                        <th>Status</th>
+                                        <th>Keterangan</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
                 
                 </div>
 
@@ -486,17 +551,33 @@
                 <label>Pilih Karyawan</label>
                 <select id="manual-abs-emp" class="input-control" style="width: 100%;"></select>
             </div>
-            <div style="display: flex; gap: 16px;">
+           <div style="display: flex; gap: 16px;">
                 <div class="form-group" style="flex: 1;">
-                    <label>Tanggal Absensi</label>
+                    <label>Tanggal</label>
                     <input type="date" id="manual-abs-date" class="input-control" style="width: 100%;" onchange="updatePreviewAbsensi()">
                 </div>
                 <div class="form-group" style="flex: 1;">
-                    <label>Tipe Hari (Otomatis)</label>
-                    <!-- Kotak ini otomatis terisi dan terkunci (readonly) -->
-                    <input type="text" id="manual-abs-tipe-display" class="input-control" style="width: 100%; background: var(--hover-bg); font-weight: bold; color: var(--primary);" readonly>
+                    <label>Status Kehadiran</label>
+                    <select id="manual-abs-status" class="input-control" style="width: 100%;" onchange="toggleJamInputAbsensi()">
+                        <option value="Hadir">Hadir Bekerja</option>
+                        <option value="Izin">Izin</option>
+                        <option value="Sakit">Sakit</option>
+                        <option value="Alfa">Alfa (Tanpa Keterangan)</option>
+                    </select>
                 </div>
             </div>
+            
+            <div style="display: flex; gap: 16px;">
+                <div class="form-group" style="flex: 1;">
+                    <label>Tipe Hari (Otomatis Kalender)</label>
+                    <input type="text" id="manual-abs-tipe-display" class="input-control" style="width: 100%; background: var(--hover-bg); font-weight: bold; color: var(--primary);" readonly>
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label>Keterangan (Wajib jika Izin/Sakit)</label>
+                    <input type="text" id="manual-abs-ket" class="input-control" style="width: 100%;" placeholder="Misal: Sakit tipes, urusan keluarga">
+                </div>
+            </div>
+            
             <div style="display: flex; gap: 16px;">
                 <div class="form-group" style="flex: 1;">
                     <label>Jam Masuk</label>
@@ -506,10 +587,6 @@
                     <label>Jam Pulang</label>
                     <input type="time" id="manual-abs-out" class="input-control" style="width: 100%;" oninput="updatePreviewAbsensi()">
                 </div>
-            </div>
-            <div class="form-group">
-                <label>Keterangan (Opsional)</label>
-                <input type="text" id="manual-abs-ket" class="input-control" style="width: 100%;" placeholder="Misal: Lupa absen, dinas luar, dll">
             </div>
             
             <!-- PREVIEW PERHITUNGAN OTOMATIS -->
@@ -1598,7 +1675,7 @@
             document.querySelectorAll('.page-content, div[id^="page-"]').forEach(el => el.classList.add('hidden')); document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             document.getElementById('page-' + pageId).classList.remove('hidden');
             if(element) element.classList.add('active'); else { let activeNav = document.querySelector('.nav-item[onclick*="' + pageId + '"]'); if (activeNav) activeNav.classList.add('active'); }
-            const titles = { 'dashboard': 'Dashboard', 'kalender': 'Kalender', 'karyawan': 'Data Karyawan', 'absensi': 'Manajemen Absensi', 'payroll': 'Perhitungan Payroll', 'kasbon': 'Kasbon Karyawan' };
+            const titles = { 'dashboard': 'Dashboard', 'kalender': 'Kalender', 'karyawan': 'Data Karyawan', 'absensi': 'Manajemen Absensi', 'payroll': 'Perhitungan Payroll', 'kasbon': 'Kasbon Karyawan', 'performa': 'Laporan Performa' };
             document.getElementById('topbar-title').innerHTML = titles[pageId] + ' <span id="loading-indicator" style="display:none;"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</span>';
             if(pageId === 'dashboard') renderDashboard();
             if(pageId === 'kalender') renderCalendar();
@@ -1819,15 +1896,18 @@
             // TENTUKAN TIPE HARI OTOMATIS SAAT DISIMPAN
             let tipe = getTipeHariByDate(date);
             let is_weekend = (tipe === 'Weekend' || tipe === 'Libur');
+            let statusAbs = document.getElementById('manual-abs-status').value;
+            let ketAbs = document.getElementById('manual-abs-ket').value;
         
-            // Buat Payload Data
             let payload = {
                 emp_id: empId,
                 date: date,
-                clock_in: cin,
-                clock_out: cout,
+                clock_in: (statusAbs === 'Hadir') ? cin : null,
+                clock_out: (statusAbs === 'Hadir') ? cout : null,
                 is_weekend: is_weekend,
-                tipe_hari: tipe
+                tipe_hari: tipe,
+                status_absen: statusAbs,
+                keterangan: ketAbs
             };
         
             let existing = db_absensi.find(a => a.emp_id === empId && a.date === date);
@@ -2134,6 +2214,167 @@
 
         let currentKasbonId = null; window.openTambahKasbon = function() { let sel = document.getElementById('kasbon-emp-id'); sel.innerHTML = ''; db_karyawan.forEach(function(e) { sel.innerHTML += '<option value="'+e.id+'">'+e.name+'</option>'; }); document.getElementById('kasbon-tanggal').value = todayStr; document.getElementById('kasbon-total').value = ''; document.getElementById('modal-tambah-kasbon').style.display = 'flex'; }; window.closeTambahKasbon = function() { document.getElementById('modal-tambah-kasbon').style.display = 'none'; }; window.saveKasbon = async function() { let emp_id = parseInt(document.getElementById('kasbon-emp-id').value); let tanggal = document.getElementById('kasbon-tanggal').value; let total = parseFloat(document.getElementById('kasbon-total').value); if(!tanggal || !total || total <= 0) return; const payload = { emp_id: emp_id, tanggal_pinjaman: tanggal, total_pinjaman: total }; const { data, error } = await supabaseApp.from('kasbon').insert([payload]).select(); if(!error) { let newObj = data ? data[0] : payload; newObj.id = newObj.id || Date.now(); db_kasbon.push(newObj); closeTambahKasbon(); renderKasbon(); renderDashboard(); } }; window.openKasbonDetail = function(kasbonId) { currentKasbonId = kasbonId; let k = db_kasbon.find(function(x) { return x.id == kasbonId; }); if(!k) return; let emp = db_karyawan.find(function(e) { return e.id == k.emp_id; }); document.getElementById('kasbon-detail-title').innerText = "Detail Kasbon - " + (emp?emp.name:''); let angsuranList = db_angsuran.filter(function(a) { return a.kasbon_id == kasbonId; }).sort(function(a,b) { return new Date(a.tanggal_angsuran) - new Date(b.tanggal_angsuran); }); let tbody = document.querySelector('#table-angsuran tbody'); tbody.innerHTML = ''; let sisa = parseFloat(k.total_pinjaman); if(angsuranList.length === 0) tbody.innerHTML = '<tr><td colspan="4" class="text-center">Belum ada angsuran</td></tr>'; else { angsuranList.forEach(function(a, i) { sisa -= parseFloat(a.nominal); tbody.innerHTML += '<tr><td>'+a.tanggal_angsuran+'</td><td>Angsuran ke-'+(i+1)+'</td><td>'+formatRp(a.nominal)+'</td><td>'+formatRp(sisa)+'</td></tr>'; }); } document.getElementById('kasbon-detail-sisa').innerText = "Sisa Terkini: " + (sisa <= 0 ? 'LUNAS' : formatRp(sisa)); let btnAngsuran = document.getElementById('btn-tambah-angsuran'); if (btnAngsuran) { btnAngsuran.style.display = sisa <= 0 ? 'none' : 'inline-flex'; } document.getElementById('modal-kasbon-detail').style.display = 'flex'; }; window.closeKasbonDetail = function() { document.getElementById('modal-kasbon-detail').style.display = 'none'; currentKasbonId = null; }; window.openTambahAngsuran = function() { if(!currentKasbonId) return; document.getElementById('input-nominal-angsuran').value = ''; document.getElementById('modal-tambah-angsuran').style.display = 'flex'; }; window.closeTambahAngsuran = function() { document.getElementById('modal-tambah-angsuran').style.display = 'none'; }; window.saveAngsuran = async function() { let nom = parseFloat(document.getElementById('input-nominal-angsuran').value); if(!nom || nom <= 0) return; const payload = { kasbon_id: currentKasbonId, tanggal_angsuran: todayStr, nominal: nom }; const { data, error } = await supabaseApp.from('angsuran').insert([payload]).select(); if(!error) { let newObj = data ? data[0] : payload; newObj.id = newObj.id || Date.now(); db_angsuran.push(newObj); closeTambahAngsuran(); openKasbonDetail(currentKasbonId); renderKasbon(); renderDashboard(); } };
 
+
+        // ================== LOGIC PERFORMA KARYAWAN ==================
+        let dateRangePerforma = { start: todayStr, end: todayStr };
+        let performaSortColumn = 'poin';
+        let performaSortOrder = 'desc';
+
+        window.filterPerforma = function() { 
+            let val = document.getElementById('date-range-performa').value;
+            let range = val.split("to").map(s => s.trim()); 
+            if (range.length > 0 && range[0] !== "") { 
+                dateRangePerforma.start = range[0]; dateRangePerforma.end = range[1] || range[0]; 
+            } 
+            renderPerforma(); 
+        };
+
+        window.toggleSortPerforma = function(col) {
+            if (performaSortColumn === col) performaSortOrder = performaSortOrder === 'asc' ? 'desc' : 'asc';
+            else { performaSortColumn = col; performaSortOrder = 'asc'; }
+            renderPerforma();
+        };
+
+        window.renderPerforma = function() {
+            let cols = ['name', 'berangkat', 'izin', 'sakit', 'alfa', 'telat', 'lembur', 'poin'];
+            cols.forEach(c => {
+                let icon = document.getElementById('sort-perf-' + c);
+                if (icon) {
+                    icon.className = performaSortColumn === c ? (performaSortOrder === 'asc' ? "fa-solid fa-sort-up" : "fa-solid fa-sort-down") : "fa-solid fa-sort";
+                    icon.style.color = performaSortColumn === c ? "var(--primary)" : "var(--text-muted)";
+                }
+            });
+
+            let tbody = document.querySelector('#table-performa tbody');
+            if(!tbody) return; tbody.innerHTML = '';
+
+            let performaData = {};
+            db_karyawan.filter(k => k.status_kerja === 'Aktif' || k.is_active).forEach(emp => {
+                performaData[emp.id] = { emp: emp, berangkat: 0, izin: 0, sakit: 0, alfa: 0, telat: 0, lembur: 0 };
+            });
+
+            let filteredAbsensi = db_absensi.filter(ab => {
+                let dbDate = ab.date ? ab.date.substring(0, 10) : "";
+                return dbDate >= dateRangePerforma.start && dbDate <= dateRangePerforma.end;
+            });
+
+            filteredAbsensi.forEach(ab => {
+                if(performaData[ab.emp_id]) {
+                    let st = ab.status_absen || 'Hadir';
+                    if (st === 'Izin') performaData[ab.emp_id].izin++;
+                    else if (st === 'Sakit') performaData[ab.emp_id].sakit++;
+                    else if (st === 'Alfa') performaData[ab.emp_id].alfa++;
+                    else {
+                        performaData[ab.emp_id].berangkat++;
+                        let p = hitungPoinAkhir(ab);
+                        if (p.lateness > 0) performaData[ab.emp_id].telat++;
+                        performaData[ab.emp_id].lembur += p.lemburTotal;
+                    }
+                }
+            });
+
+            let processedList = Object.keys(performaData).map(k => {
+                let d = performaData[k];
+                // Rumus Poin Performa AI 0-100
+                let poin = 100 - (d.telat * 2) - (d.izin * 2) - (d.alfa * 10) + (d.lembur * 1);
+                return { ...d, poin: poin };
+            });
+
+            let q = document.getElementById('search-performa') ? document.getElementById('search-performa').value.toLowerCase() : '';
+            if (q) processedList = processedList.filter(item => item.emp.name.toLowerCase().includes(q));
+
+            processedList.sort((a,b) => {
+                let res = 0;
+                if (performaSortColumn === 'name') res = a.emp.name.localeCompare(b.emp.name);
+                else if (performaSortColumn === 'berangkat') res = a.berangkat - b.berangkat;
+                else if (performaSortColumn === 'izin') res = a.izin - b.izin;
+                else if (performaSortColumn === 'sakit') res = a.sakit - b.sakit;
+                else if (performaSortColumn === 'alfa') res = a.alfa - b.alfa;
+                else if (performaSortColumn === 'telat') res = a.telat - b.telat;
+                else if (performaSortColumn === 'lembur') res = a.lembur - b.lembur;
+                else if (performaSortColumn === 'poin') res = a.poin - b.poin;
+                return performaSortOrder === 'asc' ? res : -res;
+            });
+
+            let sumBerangkat=0, sumIzinSakit=0, sumAlfa=0, sumPoin=0;
+            if(processedList.length === 0) tbody.innerHTML = '<tr><td colspan="8" class="text-center">Tidak ada data</td></tr>';
+            
+            processedList.forEach(item => {
+                sumBerangkat += item.berangkat; sumIzinSakit += (item.izin + item.sakit); sumAlfa += item.alfa; sumPoin += item.poin;
+                let poinColor = item.poin >= 100 ? 'var(--primary)' : (item.poin >= 80 ? 'var(--info)' : (item.poin >= 60 ? 'var(--warning)' : 'var(--danger)'));
+                
+                tbody.innerHTML += `<tr>
+                    <td class="clickable-name" onclick="openDetailPerforma(${item.emp.id}, '${item.emp.name}')">${item.emp.name}</td>
+                    <td class="text-center">${item.berangkat}</td>
+                    <td class="text-center" style="color:var(--warning);">${item.izin}</td>
+                    <td class="text-center" style="color:#0284c7;">${item.sakit}</td>
+                    <td class="text-center" style="color:var(--danger); font-weight:bold;">${item.alfa}</td>
+                    <td class="text-center">${item.telat} kali</td>
+                    <td class="text-center">${item.lembur.toFixed(1)} Jam</td>
+                    <td class="text-center" style="font-weight:bold; color:${poinColor};">${item.poin.toFixed(1)}</td>
+                </tr>`;
+            });
+
+            document.getElementById('perf-tot-berangkat').innerText = sumBerangkat;
+            document.getElementById('perf-tot-izinsakit').innerText = sumIzinSakit;
+            document.getElementById('perf-tot-alfa').innerText = sumAlfa;
+            document.getElementById('perf-avg-poin').innerText = processedList.length > 0 ? (sumPoin / processedList.length).toFixed(1) : 0;
+        };
+
+        window.openDetailPerforma = function(empId, empName) {
+            document.getElementById('detail-performa-title').innerText = "Detail Absensi Khusus: " + empName;
+            let tbody = document.querySelector('#table-detail-performa tbody'); tbody.innerHTML = '';
+            
+            let filtered = db_absensi.filter(ab => {
+                let dbDate = ab.date ? ab.date.substring(0, 10) : "";
+                return ab.emp_id === empId && dbDate >= dateRangePerforma.start && dbDate <= dateRangePerforma.end && (ab.status_absen === 'Izin' || ab.status_absen === 'Sakit' || ab.status_absen === 'Alfa');
+            });
+            filtered.sort((a,b) => new Date(b.date) - new Date(a.date));
+
+            if(filtered.length === 0) tbody.innerHTML = '<tr><td colspan="4" class="text-center">Tidak ada record Izin/Sakit/Alfa di periode ini.</td></tr>';
+            else {
+                filtered.forEach(ab => {
+                    let badge = '';
+                    if(ab.status_absen === 'Izin') badge = '<span class="badge badge-warning">Izin</span>';
+                    else if(ab.status_absen === 'Sakit') badge = '<span class="badge badge-info" style="background:#e0f2fe; color:#0284c7; border:1px solid #38bdf8;">Sakit</span>';
+                    else if(ab.status_absen === 'Alfa') badge = '<span class="badge badge-danger" style="background:#fee2e2; color:#b91c1c; border:1px solid #f87171;">Alfa</span>';
+                    
+                    tbody.innerHTML += `<tr>
+                        <td>${ab.date}</td><td>${badge}</td><td>${ab.keterangan || '-'}</td>
+                        <td>
+                            <div style="display:flex; gap:4px;">
+                                <button class="btn btn-accent" style="padding:4px 8px; font-size:12px;" onclick="editStatusManual(${ab.emp_id}, '${ab.date}', '${ab.status_absen}', '${ab.keterangan || ''}')"><i class="fa-solid fa-pen"></i></button>
+                                <button class="btn btn-danger" style="padding:4px 8px; font-size:12px;" onclick="deleteAbsensi(${ab.emp_id}, '${ab.date}', '${empName}')"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </td>
+                    </tr>`;
+                });
+            }
+            document.getElementById('modal-detail-performa').style.display = 'flex';
+        };
+
+        window.closeDetailPerformaModal = function() { document.getElementById('modal-detail-performa').style.display = 'none'; };
+
+        window.editStatusManual = function(empId, date, status, ket) {
+            closeDetailPerformaModal(); openTambahAbsensiModal();
+            document.getElementById('manual-abs-emp').value = empId;
+            document.getElementById('manual-abs-date').value = date;
+            document.getElementById('manual-abs-status').value = status;
+            document.getElementById('manual-abs-ket').value = ket;
+            toggleJamInputAbsensi();
+        };
+
+        window.toggleJamInputAbsensi = function() {
+            let status = document.getElementById('manual-abs-status').value;
+            let inEl = document.getElementById('manual-abs-in'); let outEl = document.getElementById('manual-abs-out');
+            if (status === 'Hadir') { inEl.disabled = false; outEl.disabled = false; } 
+            else { 
+                inEl.value = ''; outEl.value = ''; inEl.disabled = true; outEl.disabled = true;
+                document.getElementById('preview-pokok').innerText = "0"; document.getElementById('preview-ekstra').innerText = "0";
+            }
+        };
+        
+        
         // Print & Details Payroll
         window.clickNamePayroll = function(name) { currentPayrollFilterName = name; document.getElementById('btn-reset-payroll').style.display = 'inline-flex'; renderPayroll(); }; window.resetFilterPayroll = function() { currentPayrollFilterName = null; document.getElementById('btn-reset-payroll').style.display = 'none'; renderPayroll(); };
         window.showPayrollDetailModal = function(empId, empName) { document.getElementById('payroll-detail-subtitle').innerText = "Karyawan: " + empName + " | Periode: " + dateRangePayroll.start + " s/d " + dateRangePayroll.end; let tbody = document.querySelector('#table-payroll-detail-daily tbody'); tbody.innerHTML = ''; let filtered = db_absensi.filter(function(ab) { return ab.emp_id == empId && ab.date >= dateRangePayroll.start && ab.date <= dateRangePayroll.end; }); filtered.sort(function(a, b) { return new Date(a.date) - new Date(b.date); }); if (filtered.length === 0) { tbody.innerHTML = '<tr><td colspan="8" class="text-center">Tidak ada data absensi untuk periode ini</td></tr>'; } else { filtered.forEach(function(ab) { let tHari = ab.tipe_hari || (ab.is_weekend ? 'Weekend' : 'Weekday'); let p = hitungPoinAkhir(ab); let dayName = new Date(ab.date).toLocaleDateString('id-ID', { weekday: 'long' }); let latenessStr = p.lateness > 0 ? '<span style="color:var(--danger)">' + formatHours(p.lateness) + '</span>' : '-'; let tHariBadge = tHari === 'Libur' ? '<span class="badge badge-warning">Libur</span>' : (tHari === 'Weekend' ? '<span class="badge badge-inactive">Weekend</span>' : '<span class="badge badge-active">Weekday</span>'); tbody.innerHTML += '<tr><td>' + ab.date + '</td><td>' + dayName + '</td><td>' + (ab.clock_in || '-') + '</td><td>' + (ab.clock_out || '-') + '</td><td>' + tHariBadge + '</td><td>' + Number(p.pokok.toFixed(2)) + '</td><td>' + Number(p.ekstra.toFixed(2)) + '</td><td>' + latenessStr + '</td></tr>'; }); } document.getElementById('modal-payroll-detail').style.display = 'flex'; }; window.closePayrollDetailModal = function() { document.getElementById('modal-payroll-detail').style.display = 'none'; };
