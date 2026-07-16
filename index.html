@@ -284,9 +284,9 @@
                     </div>
 
                     <div class="grid-3">
-                        <div class="card"><h3 class="card-title" style="color:var(--danger)"><i class="fa-solid fa-clock-rotate-left"></i> Karyawan Terlambat</h3><div class="table-container" style="max-height: 300px; overflow-y:auto;"><table id="dash-table-late"><thead><tr><th>Nama</th><th>Shift</th><th>Jam Masuk</th><th>Telat</th></tr></thead><tbody><tr><td colspan="4" class="text-center">Tidak ada keterlambatan</td></tr></tbody></table></div></div>
-                        <div class="card"><h3 class="card-title" style="color:var(--warning)"><i class="fa-solid fa-business-time"></i> Lembur Karyawan</h3><div class="table-container" style="max-height: 300px; overflow-y:auto;"><table id="dash-table-overtime"><thead><tr><th>Nama</th><th>Shift</th><th>Tot. Lembur</th><th>Est. Gaji Extra</th></tr></thead><tbody><tr><td colspan="4" class="text-center">Tidak ada data lembur</td></tr></tbody></table></div></div>
-                        <div class="card"><h3 class="card-title" style="color:var(--info)"><i class="fa-solid fa-user-doctor"></i> Izin / Sakit / Alfa</h3><div class="table-container" style="max-height: 300px; overflow-y:auto;"><table id="dash-table-absen-khusus"><thead><tr><th>Nama</th><th>Status</th><th>Keterangan</th></tr></thead><tbody><tr><td colspan="3" class="text-center">Memuat...</td></tr></tbody></table></div></div>
+                        <div class="card"><h3 class="card-title" style="color:var(--info)"><i class="fa-solid fa-user-doctor"></i> Izin / Sakit / Alfa</h3><div class="table-container" style="max-height: 300px; overflow-y:auto;"><table id="dash-table-absen-khusus"><thead><tr><th>Nama</th><th>Status</th><th>Keterangan</th></tr></thead><tbody><tr><td colspan="3" class="text-center">Memuat data...</td></tr></tbody></table></div></div>
+                        <div class="card"><h3 class="card-title" style="color:var(--danger)"><i class="fa-solid fa-clock-rotate-left"></i> Karyawan Terlambat</h3><div class="table-container" style="max-height: 300px; overflow-y:auto;"><table id="dash-table-late"><thead><tr><th>Nama</th><th>Shift</th><th>Jam Masuk</th><th>Telat</th></tr></thead><tbody><tr><td colspan="4" class="text-center">Memuat data...</td></tr></tbody></table></div></div>
+                        <div class="card"><h3 class="card-title" style="color:var(--warning)"><i class="fa-solid fa-business-time"></i> Lembur Karyawan</h3><div class="table-container" style="max-height: 300px; overflow-y:auto;"><table id="dash-table-overtime"><thead><tr><th>Nama</th><th>Shift</th><th>Tot. Lembur</th><th>Est. Gaji Extra</th></tr></thead><tbody><tr><td colspan="4" class="text-center">Memuat data...</td></tr></tbody></table></div></div>
                     </div>
                     </div>
                 </div> 
@@ -543,6 +543,29 @@
 
     <!-- ================== SEMUA MODAL POPUP ================== -->
 
+    <!-- Modal Full Log Aktifitas (Format Tabel) -->
+    <div id="modal-log-aktifitas" class="modal" style="z-index: 103;">
+        <div class="modal-content" style="width: 800px; max-width: 95%;">
+            <div class="modal-header">
+                <span>Log Aktifitas Harian</span>
+                <i class="fa-solid fa-times" style="cursor:pointer;" onclick="closeLogAktifitas()"></i>
+            </div>
+            <div class="table-container" style="max-height: 500px; overflow-y:auto;">
+                <table id="table-log-aktifitas">
+                    <thead>
+                        <tr>
+                            <th style="width: 5%; text-align:center;">No</th>
+                            <th style="width: 25%;">Info Waktu & User</th>
+                            <th style="width: 20%;">Informasi Target</th>
+                            <th style="width: 50%;">Detail Aktivitas & Perubahan Data</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
     <!-- Modal Tambah Absensi Manual -->
     <div id="modal-tambah-absensi" class="modal">
         <div class="modal-content" style="width: 500px;">
@@ -1574,19 +1597,88 @@
                 let st = k.status_kerja || (k.is_active ? 'Aktif' : 'Resign'); return st === 'Aktif'; 
             }); 
             document.getElementById('dash-total-emp').innerText = activeEmps.length;
-            let absensiFiltered = db_absensi.filter(function(a) { return a.date === filterDashboard.date; });
-            let hadirList = []; let lateList = []; let overtimeList = []; let dashLembur = 0;
-            absensiFiltered.forEach(function(ab) {
-                let emp = db_karyawan.find(function(k) { return k.id == ab.emp_id; }); if(!emp) return;
-                let tHari = ab.tipe_hari || (ab.is_weekend ? 'Weekend' : 'Weekday'); let shiftName = '-'; let st = getShiftDetails(ab.clock_in || '00:00', tHari); shiftName = st.name;
-                if(filterDashboard.shift && filterDashboard.shift !== shiftName) return; hadirList.push(ab); 
-                let p = hitungPoinAkhir(ab); dashLembur += p.lemburTotal;
-                if(p.lateness > 0) lateList.push({ emp: emp.name, shift: p.shiftName, in: ab.clock_in, lateness: p.lateness });
-                if(p.lemburTotal > 0) { let estGaji = (emp.gaji_per_poin_pokok || 0) * ((p.ekstra / 8) * 2); overtimeList.push({ emp: emp.name, shift: p.shiftName, out: ab.clock_out, total: p.lemburTotal, est: estGaji }); }
-            });
-            document.getElementById('dash-hadir').innerText = hadirList.length; document.getElementById('dash-belum').innerText = filterDashboard.shift ? "-" : (activeEmps.length - hadirList.length); document.getElementById('dash-lembur').innerText = formatHours(dashLembur);
             
-            // Payroll Estimation Logic for Dashboard
+            let absensiFiltered = db_absensi.filter(function(a) { return a.date === filterDashboard.date; });
+            
+            let hadirList = []; let absenKhususList = []; let lateList = []; let overtimeList = []; let dashLembur = 0;
+            let allActivities = []; // Array khusus penampung Log Aktivitas
+            
+            absensiFiltered.forEach(function(ab) {
+                let emp = db_karyawan.find(function(k) { return k.id == ab.emp_id; }); 
+                if(!emp) return;
+                
+                let empName = emp.name;
+                
+                // Pisahkan Karyawan Izin/Sakit/Alfa
+                if (ab.status_absen === 'Izin' || ab.status_absen === 'Sakit' || ab.status_absen === 'Alfa') {
+                    absenKhususList.push({ emp: empName, status: ab.status_absen, ket: ab.keterangan || '-' });
+                    
+                    // Catat Izin/Sakit/Alfa ke Log Aktifitas
+                    allActivities.push({
+                        time: "00:00",
+                        user: empName,
+                        target: "Absensi / Kehadiran",
+                        detail: `Status hari ini tercatat sebagai <strong>${ab.status_absen}</strong>. <br>Keterangan: ${ab.keterangan || 'Sistem Otomatis / Tanpa Keterangan'}`
+                    });
+
+                } else { // Karyawan Hadir Normal
+                    let tHari = ab.tipe_hari || (ab.is_weekend ? 'Weekend' : 'Weekday'); 
+                    let shiftName = '-'; 
+                    let st = getShiftDetails(ab.clock_in || '00:00', tHari); 
+                    shiftName = st.name;
+                    
+                    if(filterDashboard.shift && filterDashboard.shift !== shiftName) return; 
+                    
+                    hadirList.push(ab); 
+                    let p = hitungPoinAkhir(ab); dashLembur += p.lemburTotal;
+                    if(p.lateness > 0) lateList.push({ emp: empName, shift: p.shiftName, in: ab.clock_in, lateness: p.lateness });
+                    if(p.lemburTotal > 0) { let estGaji = (emp.gaji_per_poin_pokok || 0) * ((p.ekstra / 8) * 2); overtimeList.push({ emp: empName, shift: p.shiftName, out: ab.clock_out, total: p.lemburTotal, est: estGaji }); }
+                    
+                    // Catat Check-In ke Log Aktifitas
+                    if (ab.clock_in) {
+                        allActivities.push({
+                            time: ab.clock_in,
+                            user: empName,
+                            target: "Mesin Absen (" + shiftName + ")",
+                            detail: `Melakukan <strong>Check-In</strong> kehadiran` + (p.lateness > 0 ? ` <span style="color:var(--danger)">(Telat ${formatHours(p.lateness)})</span>` : "")
+                        });
+                    }
+                    // Catat Check-Out ke Log Aktifitas
+                    if (ab.clock_out) {
+                        allActivities.push({
+                            time: ab.clock_out,
+                            user: empName,
+                            target: "Mesin Absen (" + shiftName + ")",
+                            detail: `Melakukan <strong>Check-Out</strong> kehadiran` + (p.lemburTotal > 0 ? ` <span style="color:var(--warning)">(Lembur ${formatHours(p.lemburTotal)})</span>` : "")
+                        });
+                    }
+                }
+            });
+
+            // Update UI Ringkasan Atas
+            document.getElementById('dash-hadir').innerText = hadirList.length; 
+            document.getElementById('dash-belum').innerText = filterDashboard.shift ? "-" : (activeEmps.length - hadirList.length - absenKhususList.length); 
+            document.getElementById('dash-lembur').innerText = formatHours(dashLembur);
+            
+            // --- TABEL IZIN SAKIT ALFA ---
+            let tbodyK = document.querySelector('#dash-table-absen-khusus tbody'); 
+            if (tbodyK) {
+                tbodyK.innerHTML = ''; 
+                if(absenKhususList.length === 0) {
+                    tbodyK.innerHTML='<tr><td colspan="3" class="text-center">Nihil (Tidak ada)</td></tr>';
+                } else {
+                    absenKhususList.forEach(k => {
+                        let badge = '';
+                        if(k.status === 'Izin') badge = '<span class="badge badge-warning">Izin</span>';
+                        else if(k.status === 'Sakit') badge = '<span class="badge badge-info" style="background:#e0f2fe;color:#0284c7;border:1px solid #38bdf8;">Sakit</span>';
+                        else badge = '<span class="badge badge-danger" style="background:#fee2e2;color:#b91c1c;border:1px solid #f87171;">Alfa</span>';
+                        
+                        tbodyK.innerHTML += '<tr><td><strong>'+k.emp+'</strong></td><td>'+badge+'</td><td style="font-size:12px;">'+k.ket+'</td></tr>';
+                    });
+                }
+            }
+
+            // --- ESTIMASI PAYROLL ---
             let mStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
             let mEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
             let absensiMonth = db_absensi.filter(a => a.date >= mStart && a.date <= mEnd);
@@ -1608,72 +1700,57 @@
             document.getElementById('wid-pay-pokok').innerText = formatRp(mPayPokok); document.getElementById('wid-pay-lembur').innerText = formatRp(mPayLembur); document.getElementById('wid-pay-bonus').innerText = formatRp(mPayBonus); document.getElementById('wid-pay-bpjs').innerText = formatRp(potBpjsTot); document.getElementById('wid-pay-net').innerText = formatRp(mNetPay);
             document.getElementById('wid-bpjs-aktif').innerText = activeBpjsCount + " Orang"; document.getElementById('wid-bpjs-bulan').innerText = today.toLocaleString('id-ID', { month: 'long', year: 'numeric' }); document.getElementById('wid-bpjs-status').innerText = isBpjsDeductible ? "Telah Dipotong" : "Menunggu Tgl 10"; document.getElementById('wid-bpjs-total').innerText = formatRp(potBpjsTot);
 
-            // Kasbon Estimation Logic
+            // --- ESTIMASI KASBON ---
             let totKasbonOut = 0; let totKasbonIn = 0; let hutangOrang = {};
             db_kasbon.forEach(k => { totKasbonOut += parseFloat(k.total_pinjaman); let angTotal = 0; db_angsuran.filter(a => a.kasbon_id == k.id).forEach(a => angTotal += parseFloat(a.nominal)); totKasbonIn += angTotal; if(parseFloat(k.total_pinjaman) - angTotal > 0) hutangOrang[k.emp_id] = true; });
             let sisaKasbonTotal = totKasbonOut - totKasbonIn; document.getElementById('dash-tot-kasbon').innerText = formatRp(sisaKasbonTotal); document.getElementById('wid-kas-total').innerText = formatRp(totKasbonOut); document.getElementById('wid-kas-lunas').innerText = formatRp(totKasbonIn); document.getElementById('wid-kas-orang').innerText = Object.keys(hutangOrang).length + " Orang"; document.getElementById('wid-kas-sisa').innerText = formatRp(sisaKasbonTotal);
 
-            // Today Table
-            let tbodyT = document.querySelector('#dash-table-today tbody'); tbodyT.innerHTML = '';
+            // --- TABEL HARI INI, TERLAMBAT, LEMBUR ---
+            let tbodyT = document.querySelector('#dash-table-today tbody'); if(tbodyT) { tbodyT.innerHTML = '';
             if(hadirList.length === 0) tbodyT.innerHTML = '<tr><td colspan="6" class="text-center">Tidak ada absen</td></tr>';
-            hadirList.forEach(ab => { let emp = db_karyawan.find(k => k.id == ab.emp_id); let tHari = ab.tipe_hari || (ab.is_weekend ? 'Weekend' : 'Weekday'); let p = hitungPoinAkhir(ab); let badge = p.lateness > 0 ? '<span class="badge badge-inactive">Telat</span>' : '<span class="badge badge-active">Tepat Waktu</span>'; if(!ab.clock_out) badge = '<span class="badge badge-warning">Sedang Bekerja</span>'; tbodyT.innerHTML += '<tr><td>' + (emp ? emp.name : ab.emp_id) + '</td><td>' + p.shiftName + '</td><td>' + (ab.clock_in || '-') + '</td><td>' + (ab.clock_out || '-') + '</td><td>' + badge + '</td><td>' + formatHours(p.lemburTotal) + '</td></tr>'; });
+            hadirList.forEach(ab => { let emp = db_karyawan.find(k => k.id == ab.emp_id); let tHari = ab.tipe_hari || (ab.is_weekend ? 'Weekend' : 'Weekday'); let p = hitungPoinAkhir(ab); let badge = p.lateness > 0 ? '<span class="badge badge-inactive">Telat</span>' : '<span class="badge badge-active">Tepat Waktu</span>'; if(!ab.clock_out) badge = '<span class="badge badge-warning">Sedang Bekerja</span>'; tbodyT.innerHTML += '<tr><td>' + (emp ? emp.name : ab.emp_id) + '</td><td>' + p.shiftName + '</td><td>' + (ab.clock_in || '-') + '</td><td>' + (ab.clock_out || '-') + '</td><td>' + badge + '</td><td>' + formatHours(p.lemburTotal) + '</td></tr>'; }); }
 
-            let tbodyL = document.querySelector('#dash-table-late tbody'); tbodyL.innerHTML = ''; if(lateList.length===0) tbodyL.innerHTML='<tr><td colspan="4" class="text-center">Semua tepat waktu</td></tr>';
-            lateList.forEach(l => tbodyL.innerHTML+='<tr><td>'+l.emp+'</td><td>'+l.shift+'</td><td>'+l.in+'</td><td style="color:var(--danger); font-weight:600;">'+formatHours(l.lateness)+'</td></tr>');
+            let tbodyL = document.querySelector('#dash-table-late tbody'); if(tbodyL) { tbodyL.innerHTML = ''; if(lateList.length===0) tbodyL.innerHTML='<tr><td colspan="4" class="text-center">Semua tepat waktu</td></tr>';
+            lateList.forEach(l => tbodyL.innerHTML+='<tr><td>'+l.emp+'</td><td>'+l.shift+'</td><td>'+l.in+'</td><td style="color:var(--danger); font-weight:600;">'+formatHours(l.lateness)+'</td></tr>'); }
 
-            let tbodyO = document.querySelector('#dash-table-overtime tbody'); tbodyO.innerHTML = ''; if(overtimeList.length===0) tbodyO.innerHTML='<tr><td colspan="4" class="text-center">Tidak ada data</td></tr>';
-            overtimeList.forEach(o => tbodyO.innerHTML+='<tr><td>'+o.emp+'</td><td>'+o.shift+'</td><td style="color:var(--warning); font-weight:600;">'+formatHours(o.total)+'</td><td>'+formatRp(o.est)+'</td></tr>');
+            let tbodyO = document.querySelector('#dash-table-overtime tbody'); if(tbodyO){ tbodyO.innerHTML = ''; if(overtimeList.length===0) tbodyO.innerHTML='<tr><td colspan="4" class="text-center">Tidak ada data</td></tr>';
+            overtimeList.forEach(o => tbodyO.innerHTML+='<tr><td>'+o.emp+'</td><td>'+o.shift+'</td><td style="color:var(--warning); font-weight:600;">'+formatHours(o.total)+'</td><td>'+formatRp(o.est)+'</td></tr>'); }
             
-            // ==========================================
-            // KODE BARU: AKTIVITAS TERBARU LOGIC
-            // ==========================================
+            // --- LOG AKTIVITAS (FEED KECIL & TABEL BESAR) ---
+            allActivities.sort((a, b) => b.time.localeCompare(a.time)); // Urutkan aktivitas dari terbaru ke terlama
+            
+            // Render Feed Kecil (Di Dashboard)
             let activityFeed = document.getElementById('dash-activity-feed');
-            activityFeed.innerHTML = ''; // Kosongkan tulisan "Sedang memuat..."
-            
-            let recentActivities = [];
-            
-            // Kumpulkan data check in dan check out hari ini
-            absensiFiltered.forEach(ab => {
-                let emp = db_karyawan.find(k => k.id == ab.emp_id);
-                let empName = emp ? emp.name : 'ID ' + ab.emp_id;
-
-                if (ab.clock_in) {
-                    recentActivities.push({
-                        time: ab.clock_in,
-                        text: `<strong>${empName}</strong> melakukan Check-In`,
-                        type: 'in' // Hijau
+            if(activityFeed) {
+                activityFeed.innerHTML = '';
+                if (allActivities.length === 0) {
+                    activityFeed.innerHTML = '<div class="activity-item"><span class="activity-time">-</span>Belum ada aktivitas hari ini</div>';
+                } else {
+                    allActivities.slice(0, 15).forEach((act) => {
+                        let dotColor = act.detail.includes('Check-In') ? 'var(--primary)' : (act.detail.includes('Check-Out') ? 'var(--warning)' : 'var(--danger)');
+                        activityFeed.innerHTML += `<div class="activity-item" style="--bullet-color: ${dotColor};"><span class="activity-time"><i class="fa-regular fa-clock"></i> Jam ${act.time}</span><strong>${act.user}</strong> ${act.detail}</div>`;
                     });
                 }
-                if (ab.clock_out) {
-                    recentActivities.push({
-                        time: ab.clock_out,
-                        text: `<strong>${empName}</strong> melakukan Check-Out`,
-                        type: 'out' // Kuning/Merah
-                    });
-                }
-            });
-
-            // Urutkan dari jam terbaru (descending) ke jam terlama
-            recentActivities.sort((a, b) => b.time.localeCompare(a.time));
-
-            // Tampilkan ke layar (Maksimal 15 aktivitas terbaru agar tidak kepanjangan)
-            if (recentActivities.length === 0) {
-                activityFeed.innerHTML = '<div class="activity-item"><span class="activity-time">-</span>Belum ada aktivitas hari ini</div>';
-            } else {
-                recentActivities.slice(0, 15).forEach(act => {
-                    // Beri warna dot: Hijau untuk Masuk, Kuning untuk Pulang
-                    let dotColor = act.type === 'in' ? 'var(--primary)' : 'var(--warning)';
-                    activityFeed.innerHTML += `
-                        <div class="activity-item" style="--bullet-color: ${dotColor};">
-                            <span class="activity-time"><i class="fa-regular fa-clock"></i> Pukul ${act.time}</span>
-                            ${act.text}
-                        </div>
-                    `;
-                });
             }
-            // ==========================================
-            // AKHIR KODE BARU
-            // ==========================================
+
+            // Render Tabel Besar (Saat tombol Log diklik)
+            let tbodyLog = document.querySelector('#table-log-aktifitas tbody');
+            if(tbodyLog) {
+                tbodyLog.innerHTML = '';
+                if (allActivities.length === 0) {
+                    tbodyLog.innerHTML = '<tr><td colspan="4" class="text-center">Tidak ada log aktivitas hari ini</td></tr>';
+                } else {
+                    let no = 1;
+                    allActivities.forEach(act => {
+                        tbodyLog.innerHTML += `<tr>
+                            <td class="text-center">${no++}</td>
+                            <td><strong>${act.user}</strong><br><small style="color:var(--text-muted)"><i class="fa-regular fa-clock"></i> Jam ${act.time}</small></td>
+                            <td><span class="badge badge-active" style="background:#f3f4f6; color:#374151; border:1px solid #d1d5db;">${act.target}</span></td>
+                            <td style="font-size: 13px;">${act.detail}</td>
+                        </tr>`;
+                    });
+                }
+            }
 
             renderCharts();
         }
