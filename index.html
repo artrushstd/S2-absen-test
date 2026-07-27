@@ -1707,28 +1707,62 @@
             let tbodyO = document.querySelector('#dash-table-overtime tbody'); if(tbodyO){ tbodyO.innerHTML = ''; if(overtimeList.length===0) tbodyO.innerHTML='<tr><td colspan="4" class="text-center">Tidak ada data</td></tr>'; overtimeList.forEach(o => tbodyO.innerHTML+='<tr><td>'+o.emp+'</td><td>'+o.shift+'</td><td style="color:var(--warning); font-weight:600;">'+formatHours(o.total)+'</td><td>'+formatRp(o.est)+'</td></tr>'); }
             
             // Estimasi Payroll & Kasbon
-            let mStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-            let mEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+            let pStart = todayStr.split('-');
+            let mStart = new Date(pStart[0], pStart[1]-1, 1).toISOString().split('T')[0];
+            let mEnd = new Date(pStart[0], pStart[1], 0).toISOString().split('T')[0];
+            
             let absensiMonth = db_absensi.filter(a => a.date >= mStart && a.date <= mEnd);
             let mPayPokok=0; let mPayLembur=0; let mPayBonus=0; let empPayrollData = {};
+            
             db_karyawan.forEach(e => empPayrollData[e.id] = { pokok:0, ekstra:0 });
             absensiMonth.forEach(ab => { if(empPayrollData[ab.emp_id]) { let p = hitungPoinAkhir(ab); empPayrollData[ab.emp_id].pokok += p.pokok; empPayrollData[ab.emp_id].ekstra += p.ekstra; } });
+            
             let activeBpjsCount = 0; let potBpjsTot = 0; let isBpjsDeductible = today.getDate() >= 10;
+            
             db_karyawan.forEach(emp => {
-                if(emp.status_bpjs === 'Aktif') activeBpjsCount++; let data = empPayrollData[emp.id]; if(!data || data.pokok === 0) return;
+                if(emp.status_bpjs === 'Aktif') activeBpjsCount++; 
+                let data = empPayrollData[emp.id]; 
+                if(!data || data.pokok === 0) return;
+                
                 let bKey = emp.id + "_" + mStart; let b = db_bonus[bKey] || {};
                 let pPokok = b.poin_pokok_override !== null && b.poin_pokok_override !== undefined ? b.poin_pokok_override : data.pokok;
                 let pEkstra = b.poin_ekstra_override !== null && b.poin_ekstra_override !== undefined ? b.poin_ekstra_override : data.ekstra;
                 let gPokok = b.gaji_pokok_override !== null && b.gaji_pokok_override !== undefined ? b.gaji_pokok_override : (pPokok * emp.gaji_per_poin_pokok);
-                let gEkstra = (emp.gaji_per_poin_pokok||0) * ((pEkstra / 8) * 2); let gBonus = b.nominal || ((b.poin || 0) * (emp.gaji_per_poin_pokok||0));
-                mPayPokok += gPokok; mPayLembur += gEkstra; mPayBonus += gBonus; if(emp.status_bpjs === 'Aktif' && isBpjsDeductible) potBpjsTot += 55000;
+                let gEkstra = (emp.gaji_per_poin_pokok||0) * ((pEkstra / 8) * 2); 
+                let gBonus = b.nominal || ((b.poin || 0) * (emp.gaji_per_poin_pokok||0));
+                
+                mPayPokok += gPokok; mPayLembur += gEkstra; mPayBonus += gBonus; 
+                if(emp.status_bpjs === 'Aktif' && isBpjsDeductible) potBpjsTot += 55000;
             });
             let mNetPay = mPayPokok + mPayLembur + mPayBonus - potBpjsTot;
-            document.getElementById('dash-est-payroll').innerText = formatRp(mNetPay);
             
-            let totKasbonOut = 0; let totKasbonIn = 0;
-            db_kasbon.forEach(k => { totKasbonOut += parseFloat(k.total_pinjaman); let angTotal = 0; db_angsuran.filter(a => a.kasbon_id == k.id).forEach(a => angTotal += parseFloat(a.nominal)); totKasbonIn += angTotal; });
-            document.getElementById('dash-tot-kasbon').innerText = formatRp(totKasbonOut - totKasbonIn); 
+            // --- TULIS KE KARTU PAYROLL & BPJS ---
+            document.getElementById('dash-est-payroll').innerText = formatRp(mNetPay);
+            document.getElementById('wid-pay-pokok').innerText = formatRp(mPayPokok); 
+            document.getElementById('wid-pay-lembur').innerText = formatRp(mPayLembur); 
+            document.getElementById('wid-pay-bonus').innerText = formatRp(mPayBonus); 
+            document.getElementById('wid-pay-bpjs').innerText = formatRp(potBpjsTot); 
+            document.getElementById('wid-pay-net').innerText = formatRp(mNetPay);
+            document.getElementById('wid-bpjs-aktif').innerText = activeBpjsCount + " Orang"; 
+            document.getElementById('wid-bpjs-bulan').innerText = today.toLocaleString('id-ID', { month: 'long', year: 'numeric' }); 
+            document.getElementById('wid-bpjs-status').innerText = isBpjsDeductible ? "Telah Dipotong" : "Menunggu Tgl 10"; 
+            document.getElementById('wid-bpjs-total').innerText = formatRp(potBpjsTot);
+
+            // --- TULIS KE KARTU KASBON ---
+            let totKasbonOut = 0; let totKasbonIn = 0; let hutangOrang = {};
+            db_kasbon.forEach(k => { 
+                totKasbonOut += parseFloat(k.total_pinjaman); 
+                let angTotal = 0; 
+                db_angsuran.filter(a => a.kasbon_id == k.id).forEach(a => angTotal += parseFloat(a.nominal)); 
+                totKasbonIn += angTotal; 
+                if(parseFloat(k.total_pinjaman) - angTotal > 0) hutangOrang[k.emp_id] = true; 
+            });
+            let sisaKasbonTotal = totKasbonOut - totKasbonIn; 
+            document.getElementById('dash-tot-kasbon').innerText = formatRp(sisaKasbonTotal); 
+            document.getElementById('wid-kas-total').innerText = formatRp(totKasbonOut); 
+            document.getElementById('wid-kas-lunas').innerText = formatRp(totKasbonIn); 
+            document.getElementById('wid-kas-orang').innerText = Object.keys(hutangOrang).length + " Orang"; 
+            document.getElementById('wid-kas-sisa').innerText = formatRp(sisaKasbonTotal);
             
             // --- HANYA RENDER ABSENSI DI WIDGET KIRI ---
             let activityFeed = document.getElementById('dash-activity-feed');
