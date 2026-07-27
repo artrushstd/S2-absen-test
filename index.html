@@ -1607,22 +1607,21 @@
         };
 
         window.renderDashboardLogs = function() {
-            let feed = document.getElementById('dash-activity-feed');
             let table = document.querySelector('#table-log-aktifitas tbody');
-            if(feed) feed.innerHTML = ''; if(table) table.innerHTML = '';
+            if(!table) return; table.innerHTML = '';
             
             if(db_logs.length === 0) {
-                if(feed) feed.innerHTML = '<div class="activity-item">Belum ada log sistem.</div>';
-                if(table) table.innerHTML = '<tr><td colspan="4" class="text-center">Tidak ada log aktivitas</td></tr>';
+                table.innerHTML = '<tr><td colspan="4" class="text-center">Tidak ada log aktivitas modifikasi data</td></tr>';
             } else {
-                db_logs.slice(0, 15).forEach(lg => {
-                    let dStr = new Date(lg.timestamp).toLocaleString('id-ID', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
-                    if(feed) feed.innerHTML += `<div class="activity-item" style="--bullet-color: var(--primary);"><span class="activity-time">${dStr}</span><strong>${lg.username}</strong> ${lg.action} ${lg.target}</div>`;
-                });
                 let no = 1;
                 db_logs.forEach(lg => {
                     let dStr = new Date(lg.timestamp).toLocaleString('id-ID');
-                    if(table) table.innerHTML += `<tr><td class="text-center">${no++}</td><td><strong>${lg.username}</strong><br><small style="color:var(--text-muted)">${dStr}</small></td><td><span class="badge badge-active" style="background:#f3f4f6; color:#374151; border:1px solid #d1d5db;">${lg.action} ${lg.target}</span></td><td style="font-size: 13px;">${lg.details}</td></tr>`;
+                    table.innerHTML += `<tr>
+                        <td class="text-center">${no++}</td>
+                        <td><strong>${lg.username}</strong><br><small style="color:var(--text-muted)">${dStr}</small></td>
+                        <td><span class="badge badge-active" style="background:#f3f4f6; color:#374151; border:1px solid #d1d5db;">${lg.action} ${lg.target}</span></td>
+                        <td style="font-size: 13px; line-height: 1.6;">${lg.details}</td>
+                    </tr>`;
                 });
             }
         };
@@ -1633,11 +1632,20 @@
             
             let absensiFiltered = db_absensi.filter(a => a.date === filterDashboard.date);
             let hadirList = []; let absenKhususList = []; let lateList = []; let overtimeList = []; let dashLembur = 0;
+            let attendanceLogs = []; // Array khusus untuk Widget Log Absensi
             
             absensiFiltered.forEach(ab => {
                 let emp = db_karyawan.find(k => k.id == ab.emp_id); if(!emp) return;
+                
                 if (ab.status_absen === 'Izin' || ab.status_absen === 'Sakit' || ab.status_absen === 'Alfa') {
                     absenKhususList.push({ emp: emp.name, status: ab.status_absen, ket: ab.keterangan || '-' });
+                    
+                    // Masukkan ke Log Absensi Dashboard
+                    attendanceLogs.push({
+                        time: "00:00",
+                        text: `<strong>${emp.name}</strong> tercatat <strong style="color:var(--danger)">${ab.status_absen}</strong> (${ab.keterangan || 'Otomatis'})`,
+                        type: 'khusus'
+                    });
                 } else {
                     let tHari = ab.tipe_hari || (ab.is_weekend ? 'Weekend' : 'Weekday'); 
                     let st = getShiftDetails(ab.clock_in || '00:00', tHari); 
@@ -1645,19 +1653,29 @@
                     
                     hadirList.push(ab); 
                     let p = hitungPoinAkhir(ab); dashLembur += p.lemburTotal;
+                    
                     if(p.lateness > 0) lateList.push({ emp: emp.name, shift: p.shiftName, in: ab.clock_in, lateness: p.lateness });
                     if(p.lemburTotal > 0) { 
                         let estGaji = (emp.gaji_per_poin_pokok || 0) * ((p.ekstra / 8) * 2); 
                         overtimeList.push({ emp: emp.name, shift: p.shiftName, out: ab.clock_out, total: p.lemburTotal, est: estGaji }); 
                     }
+
+                    // Masukkan Check-in & Check-out ke Log Absensi Dashboard
+                    if (ab.clock_in) {
+                        let telatInfo = p.lateness > 0 ? ` <span style="color:var(--danger)">(Telat ${formatHours(p.lateness)})</span>` : '';
+                        attendanceLogs.push({ time: ab.clock_in, text: `<strong>${emp.name}</strong> Check-In${telatInfo}`, type: 'in' });
+                    }
+                    if (ab.clock_out) {
+                        let lemburInfo = p.lemburTotal > 0 ? ` <span style="color:var(--warning)">(Lembur ${formatHours(p.lemburTotal)})</span>` : '';
+                        attendanceLogs.push({ time: ab.clock_out, text: `<strong>${emp.name}</strong> Check-Out${lemburInfo}`, type: 'out' });
+                    }
                 }
             });
 
-            // REVISI RUMUS "BELUM ABSEN HARI INI" (Menyaring Part Time & Data Unik)
+            // Rumus & Tabel Sisa (Tetap sama)
             let targetEmps = activeEmps.filter(e => e.status_pegawai !== 'Part Time');
             let absensiUnik = new Set(absensiFiltered.map(a => a.emp_id));
             let sisaBelumAbsen = targetEmps.filter(e => !absensiUnik.has(e.id)).length;
-
             document.getElementById('dash-hadir').innerText = hadirList.length; 
             document.getElementById('dash-belum').innerText = filterDashboard.shift ? "-" : sisaBelumAbsen; 
             document.getElementById('dash-lembur').innerText = formatHours(dashLembur);
@@ -1665,27 +1683,22 @@
             let tbodyK = document.querySelector('#dash-table-absen-khusus tbody'); 
             if (tbodyK) {
                 tbodyK.innerHTML = ''; 
-                if(absenKhususList.length === 0) tbodyK.innerHTML='<tr><td colspan="3" class="text-center">Nihil (Tidak ada)</td></tr>';
+                if(absenKhususList.length === 0) tbodyK.innerHTML='<tr><td colspan="3" class="text-center">Nihil</td></tr>';
                 absenKhususList.forEach(k => {
                     let badge = k.status === 'Izin' ? '<span class="badge badge-warning">Izin</span>' : (k.status === 'Sakit' ? '<span class="badge badge-info" style="background:#e0f2fe;color:#0284c7;border:1px solid #38bdf8;">Sakit</span>' : '<span class="badge badge-danger" style="background:#fee2e2;color:#b91c1c;border:1px solid #f87171;">Alfa</span>');
                     tbodyK.innerHTML += '<tr><td><strong>'+k.emp+'</strong></td><td>'+badge+'</td><td style="font-size:12px;">'+k.ket+'</td></tr>';
                 });
             }
 
-            // REVISI TABEL ABSEN HARI INI (Lupa Absen Pulang = Tidak Valid)
             let tbodyT = document.querySelector('#dash-table-today tbody'); 
             if(tbodyT) { 
                 tbodyT.innerHTML = '';
                 if(hadirList.length === 0) tbodyT.innerHTML = '<tr><td colspan="6" class="text-center">Tidak ada absen</td></tr>';
                 hadirList.forEach(ab => { 
                     let emp = db_karyawan.find(k => k.id == ab.emp_id); 
-                    let tHari = ab.tipe_hari || (ab.is_weekend ? 'Weekend' : 'Weekday'); 
-                    let p = hitungPoinAkhir(ab); 
-                    
+                    let tHari = ab.tipe_hari || (ab.is_weekend ? 'Weekend' : 'Weekday'); let p = hitungPoinAkhir(ab); 
                     let badge = p.lateness > 0 ? '<span class="badge badge-inactive">Telat</span>' : '<span class="badge badge-active">Tepat Waktu</span>'; 
-                    // ATURAN BARU LUPA ABSEN PULANG
                     if(!ab.clock_out) badge = '<span class="badge badge-danger">Tidak Absen Pulang (Tidak Valid)</span>'; 
-                    
                     tbodyT.innerHTML += '<tr><td>' + (emp ? emp.name : ab.emp_id) + '</td><td>' + p.shiftName + '</td><td>' + (ab.clock_in || '-') + '</td><td>' + (ab.clock_out || '-') + '</td><td>' + badge + '</td><td>' + formatHours(p.lemburTotal) + '</td></tr>'; 
                 }); 
             }
@@ -1693,8 +1706,48 @@
             let tbodyL = document.querySelector('#dash-table-late tbody'); if(tbodyL) { tbodyL.innerHTML = ''; if(lateList.length===0) tbodyL.innerHTML='<tr><td colspan="4" class="text-center">Semua tepat waktu</td></tr>'; lateList.forEach(l => tbodyL.innerHTML+='<tr><td>'+l.emp+'</td><td>'+l.shift+'</td><td>'+l.in+'</td><td style="color:var(--danger); font-weight:600;">'+formatHours(l.lateness)+'</td></tr>'); }
             let tbodyO = document.querySelector('#dash-table-overtime tbody'); if(tbodyO){ tbodyO.innerHTML = ''; if(overtimeList.length===0) tbodyO.innerHTML='<tr><td colspan="4" class="text-center">Tidak ada data</td></tr>'; overtimeList.forEach(o => tbodyO.innerHTML+='<tr><td>'+o.emp+'</td><td>'+o.shift+'</td><td style="color:var(--warning); font-weight:600;">'+formatHours(o.total)+'</td><td>'+formatRp(o.est)+'</td></tr>'); }
             
-            // Render Log UI & Chart
-            renderDashboardLogs();
+            // Estimasi Payroll & Kasbon
+            let mStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+            let mEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+            let absensiMonth = db_absensi.filter(a => a.date >= mStart && a.date <= mEnd);
+            let mPayPokok=0; let mPayLembur=0; let mPayBonus=0; let empPayrollData = {};
+            db_karyawan.forEach(e => empPayrollData[e.id] = { pokok:0, ekstra:0 });
+            absensiMonth.forEach(ab => { if(empPayrollData[ab.emp_id]) { let p = hitungPoinAkhir(ab); empPayrollData[ab.emp_id].pokok += p.pokok; empPayrollData[ab.emp_id].ekstra += p.ekstra; } });
+            let activeBpjsCount = 0; let potBpjsTot = 0; let isBpjsDeductible = today.getDate() >= 10;
+            db_karyawan.forEach(emp => {
+                if(emp.status_bpjs === 'Aktif') activeBpjsCount++; let data = empPayrollData[emp.id]; if(!data || data.pokok === 0) return;
+                let bKey = emp.id + "_" + mStart; let b = db_bonus[bKey] || {};
+                let pPokok = b.poin_pokok_override !== null && b.poin_pokok_override !== undefined ? b.poin_pokok_override : data.pokok;
+                let pEkstra = b.poin_ekstra_override !== null && b.poin_ekstra_override !== undefined ? b.poin_ekstra_override : data.ekstra;
+                let gPokok = b.gaji_pokok_override !== null && b.gaji_pokok_override !== undefined ? b.gaji_pokok_override : (pPokok * emp.gaji_per_poin_pokok);
+                let gEkstra = (emp.gaji_per_poin_pokok||0) * ((pEkstra / 8) * 2); let gBonus = b.nominal || ((b.poin || 0) * (emp.gaji_per_poin_pokok||0));
+                mPayPokok += gPokok; mPayLembur += gEkstra; mPayBonus += gBonus; if(emp.status_bpjs === 'Aktif' && isBpjsDeductible) potBpjsTot += 55000;
+            });
+            let mNetPay = mPayPokok + mPayLembur + mPayBonus - potBpjsTot;
+            document.getElementById('dash-est-payroll').innerText = formatRp(mNetPay);
+            
+            let totKasbonOut = 0; let totKasbonIn = 0;
+            db_kasbon.forEach(k => { totKasbonOut += parseFloat(k.total_pinjaman); let angTotal = 0; db_angsuran.filter(a => a.kasbon_id == k.id).forEach(a => angTotal += parseFloat(a.nominal)); totKasbonIn += angTotal; });
+            document.getElementById('dash-tot-kasbon').innerText = formatRp(totKasbonOut - totKasbonIn); 
+            
+            // --- HANYA RENDER ABSENSI DI WIDGET KIRI ---
+            let activityFeed = document.getElementById('dash-activity-feed');
+            if(activityFeed) {
+                activityFeed.innerHTML = '';
+                attendanceLogs.sort((a, b) => b.time.localeCompare(a.time));
+                
+                if (attendanceLogs.length === 0) {
+                    activityFeed.innerHTML = '<div class="activity-item">Belum ada absen hari ini</div>';
+                } else {
+                    attendanceLogs.slice(0, 15).forEach((act) => {
+                        let dotColor = act.type === 'in' ? 'var(--primary)' : (act.type === 'out' ? 'var(--warning)' : 'var(--danger)');
+                        let timeStr = act.time === '00:00' ? 'Hari Ini' : `Jam ${act.time}`;
+                        activityFeed.innerHTML += `<div class="activity-item" style="--bullet-color: ${dotColor};"><span class="activity-time"><i class="fa-regular fa-clock"></i> ${timeStr}</span>${act.text}</div>`;
+                    });
+                }
+            }
+
+            renderDashboardLogs(); // Panggil fungsi modal log sistem terpisah
             renderCharts();
         }
 
@@ -2743,28 +2796,55 @@
             }
         }
 
-        // ================== INJEKSI LOG SISTEM KE FUNGSI CRUD ==================
-        // Sisipkan ini ke dalam fungsi asli (di-override)
+        // ================== INJEKSI LOG SISTEM KE FUNGSI CRUD (DENGAN DETAIL BEFORE-AFTER) ==================
         const originalSaveKaryawan = window.saveKaryawan;
         window.saveKaryawan = async function() { 
-            let isEdit = document.getElementById('edit-emp-id').value !== '';
+            let editId = document.getElementById('edit-emp-id').value;
             let name = document.getElementById('new-emp-name').value;
-            await originalSaveKaryawan(); 
-            catatLogSistem(isEdit ? 'EDIT' : 'TAMBAH', 'Data Karyawan', 'Menyimpan data karyawan: ' + name);
+            let gajiBaru = document.getElementById('new-emp-gaji-pokok').value;
+            let statusBaru = document.getElementById('new-emp-status').value;
+            let jabatanBaru = document.getElementById('new-emp-jabatan').value;
+            
+            let oldData = editId ? db_karyawan.find(k => k.id == editId) : null;
+            
+            await originalSaveKaryawan(); // Jalankan fungsi asli
+            
+            let details = "";
+            if (editId && oldData) {
+                details = `<div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:5px;">
+                    <div style="background:#fee2e2; border:1px solid #f87171; padding:8px; border-radius:4px;">
+                        <strong><i class="fa-solid fa-xmark"></i> Data Lama:</strong><br>Jabatan: ${oldData.jabatan||'-'}<br>Gaji Pokok: ${formatRp(oldData.gaji_per_poin_pokok)}<br>Status: ${oldData.status_kerja||'Aktif'}
+                    </div>
+                    <div style="background:#d1fae5; border:1px solid #34d399; padding:8px; border-radius:4px;">
+                        <strong><i class="fa-solid fa-check"></i> Data Baru:</strong><br>Jabatan: ${jabatanBaru||'-'}<br>Gaji Pokok: ${formatRp(gajiBaru)}<br>Status: ${statusBaru}
+                    </div>
+                </div>`;
+                catatLogSistem('EDIT', `Data Karyawan: <strong>${name}</strong>`, details);
+            } else {
+                details = `Berhasil mendaftarkan karyawan baru dengan Gaji Pokok <strong>${formatRp(gajiBaru)}</strong> dan Jabatan <strong>${jabatanBaru||'-'}</strong>.`;
+                catatLogSistem('TAMBAH', `Karyawan Baru: <strong>${name}</strong>`, details);
+            }
         };
 
         const originalDeleteKaryawan = window.deleteKaryawan;
         window.deleteKaryawan = async function(empId, empName) {
+            let oldData = db_karyawan.find(k => k.id == empId);
             await originalDeleteKaryawan(empId, empName);
-            catatLogSistem('HAPUS', 'Data Karyawan', 'Menghapus permanen karyawan: ' + empName);
+            let details = `Telah menghapus permanen data karyawan dari database.<br>Data terakhir: Jabatan (${oldData?oldData.jabatan:'-'}), ID Mesin (${oldData?oldData.id:'-'})`;
+            catatLogSistem('HAPUS', `Data Karyawan: <strong>${empName}</strong>`, details);
         };
 
         const originalSaveTipeHari = window.saveTipeHari;
         window.saveTipeHari = async function() {
             let date = document.getElementById('modal-tipe-date').value;
-            let tipe = document.getElementById('modal-tipe-select').value;
+            let newTipe = document.getElementById('modal-tipe-select').value;
+            let oldData = db_kalender.find(k => k.tanggal === date);
+            let oldTipe = oldData ? oldData.tipe_hari : 'Normal/Sistem';
+            
             await originalSaveTipeHari();
-            catatLogSistem('UBAH', 'Kalender (Tipe Hari)', `Mengubah tanggal ${date} menjadi ${tipe}`);
+            
+            let details = `Tipe Hari diubah secara manual:<br><span style="text-decoration:line-through; color:var(--danger);">${oldTipe}</span> &nbsp;&rarr;&nbsp; <span style="color:var(--primary); font-weight:bold;">${newTipe}</span>`;
+            catatLogSistem('UBAH', `Kalender (${date})`, details);
         };
 
         const originalSaveKasbon = window.saveKasbon;
@@ -2772,21 +2852,37 @@
             let empId = document.getElementById('kasbon-emp-id').value;
             let emp = db_karyawan.find(k => k.id == empId);
             let tot = document.getElementById('kasbon-total').value;
+            
             await originalSaveKasbon();
-            if(tot) catatLogSistem('TAMBAH', 'Kasbon', `Kasbon baru untuk ${emp?emp.name:'ID '+empId} senilai ${formatRp(tot)}`);
+            
+            if(tot) catatLogSistem('TAMBAH', 'Kasbon Karyawan', `Memberikan kasbon baru kepada <strong>${emp?emp.name:'ID '+empId}</strong> senilai <strong>${formatRp(tot)}</strong>.`);
         };
 
         const originalSaveAngsuran = window.saveAngsuran;
         window.saveAngsuran = async function() {
             let nom = document.getElementById('input-nominal-angsuran').value;
             await originalSaveAngsuran();
-            if(nom) catatLogSistem('BAYAR', 'Angsuran Kasbon', `Pembayaran angsuran senilai ${formatRp(nom)}`);
+            if(nom) catatLogSistem('BAYAR', 'Angsuran Kasbon', `Mencatat pembayaran angsuran kasbon senilai <strong>${formatRp(nom)}</strong>.`);
         };
 
-        const originalDeleteKasbon = window.deleteKasbon;
-        window.deleteKasbon = async function(kasbonId, isHistory) {
-            await originalDeleteKasbon(kasbonId, isHistory);
-            catatLogSistem('HAPUS', 'Kasbon', `Menghapus kasbon dan seluruh angsurannya.`);
+        // --- TAMBAHAN: Log untuk Edit Poin Absensi ---
+        const originalSaveEditAbsensi = window.saveEditAbsensi;
+        window.saveEditAbsensi = async function() {
+            let empId = document.getElementById('edit-absensi-emp-id').value;
+            let date = document.getElementById('edit-absensi-date').value;
+            let name = document.getElementById('edit-absensi-name').value;
+            
+            let oldAb = db_absensi.find(a => a.emp_id == empId && a.date === date);
+            let oldP = oldAb && oldAb.poin_pokok_override !== null ? oldAb.poin_pokok_override : 'Otomatis';
+            let oldE = oldAb && oldAb.poin_ekstra_override !== null ? oldAb.poin_ekstra_override : 'Otomatis';
+            
+            let newP = document.getElementById('edit-absensi-pokok').value || 'Otomatis';
+            let newE = document.getElementById('edit-absensi-ekstra').value || 'Otomatis';
+            
+            await originalSaveEditAbsensi();
+            
+            let details = `Poin Pokok: <span style="color:var(--danger)">${oldP}</span> &rarr; <strong style="color:var(--primary)">${newP}</strong><br>Poin Ekstra: <span style="color:var(--danger)">${oldE}</span> &rarr; <strong style="color:var(--primary)">${newE}</strong>`;
+            catatLogSistem('EDIT', `Poin Manual: <strong>${name}</strong> (${date})`, details);
         };
 
 
