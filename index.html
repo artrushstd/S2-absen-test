@@ -1767,6 +1767,18 @@
             document.getElementById('topbar-title').innerHTML = titles[pageId] + ' <span id="loading-indicator" style="display:none;"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</span>';
             if(pageId === 'dashboard') renderDashboard();
             if(pageId === 'kalender') renderCalendar();
+            
+            // ATURAN BARU UNTUK HALAMAN PERFORMA
+            if(pageId === 'performa') {
+                let inputPerf = document.getElementById('date-range-performa');
+                // Jika input tanggal kosong/berantakan, paksa ke default "Tgl 1 s/d Hari ini"
+                if(!inputPerf.value || inputPerf.value === "") {
+                    inputPerf.value = firstDay + " to " + todayStr;
+                    dateRangePerforma.start = firstDay;
+                    dateRangePerforma.end = todayStr;
+                }
+                renderPerforma();
+            }
         };
 
         window.filterAbsensi = function() { 
@@ -2304,7 +2316,7 @@
 
 
         // ================== LOGIC PERFORMA KARYAWAN ==================
-        let dateRangePerforma = { start: firstDay, end: todayStr };
+        let dateRangePerforma = { start: firstDay, end: todayStr }; // Default: Tgl 1 s/d Hari ini
         let performaSortColumn = 'poin';
         let performaSortOrder = 'desc';
 
@@ -2336,6 +2348,22 @@
             let tbody = document.querySelector('#table-performa tbody');
             if(!tbody) return; tbody.innerHTML = '';
 
+            // Hitung Maks Poin Pokok dari Range Tanggal
+            let pStart = dateRangePerforma.start.split('-');
+            let pEnd = dateRangePerforma.end.split('-');
+            let tempD = new Date(pStart[0], pStart[1] - 1, pStart[2]);
+            let endD = new Date(pEnd[0], pEnd[1] - 1, pEnd[2]);
+            let maxPoinPokok = 0;
+            let loopGuard = 0; 
+            while(tempD <= endD && loopGuard < 365) {
+                let dStr = tempD.getFullYear() + '-' + String(tempD.getMonth()+1).padStart(2,'0') + '-' + String(tempD.getDate()).padStart(2,'0');
+                let t = getTipeHariByDate(dStr);
+                maxPoinPokok += (t === 'Weekend' || t === 'Libur') ? 2 : 1;
+                tempD.setDate(tempD.getDate() + 1); loopGuard++;
+            }
+            document.getElementById('perf-max-poin').innerText = maxPoinPokok;
+
+            // Kumpulkan Data Absen Sesuai Range
             let performaData = {};
             db_karyawan.filter(k => k.status_kerja === 'Aktif' || k.is_active).forEach(emp => {
                 performaData[emp.id] = { emp: emp, berangkat: 0, izin: 0, sakit: 0, alfa: 0, telat: 0, lembur: 0 };
@@ -2363,11 +2391,20 @@
 
             let processedList = Object.keys(performaData).map(k => {
                 let d = performaData[k];
-                // Rumus Poin Performa AI 0-100
-                let poin = 100 - (d.telat * 2) - (d.izin * 2) - (d.alfa * 10) + (d.lembur * 1);
-                return { ...d, poin: poin };
+                let totalDataAbsen = d.berangkat + d.izin + d.sakit + d.alfa;
+                
+                // Poin hanya dihitung jika karyawan tersebut punya minimal 1 data di range tanggal yang ditarik
+                let poin = 0;
+                if (totalDataAbsen > 0) {
+                    poin = 100 - (d.telat * 2) - (d.izin * 2) - (d.alfa * 10) + (d.lembur * 1);
+                }
+                return { ...d, poin: poin, totalDataAbsen: totalDataAbsen };
             });
 
+            // ATURAN BARU: Buang karyawan yang total data absennya 0 (Tidak masuk list / Tidak dihitung rata-rata)
+            processedList = processedList.filter(item => item.totalDataAbsen > 0);
+
+            // Fitur Pencarian Nama
             let q = document.getElementById('search-performa') ? document.getElementById('search-performa').value.toLowerCase() : '';
             if (q) processedList = processedList.filter(item => item.emp.name.toLowerCase().includes(q));
 
@@ -2385,24 +2422,27 @@
             });
 
             let sumBerangkat=0, sumIzinSakit=0, sumAlfa=0, sumPoin=0;
-            if(processedList.length === 0) tbody.innerHTML = '<tr><td colspan="8" class="text-center">Tidak ada data</td></tr>';
-            
-            processedList.forEach(item => {
-                sumBerangkat += item.berangkat; sumIzinSakit += (item.izin + item.sakit); sumAlfa += item.alfa; sumPoin += item.poin;
-                let poinColor = item.poin >= 100 ? 'var(--primary)' : (item.poin >= 80 ? 'var(--info)' : (item.poin >= 60 ? 'var(--warning)' : 'var(--danger)'));
-                
-                tbody.innerHTML += `<tr>
-                    <td class="clickable-name" onclick="openDetailPerforma(${item.emp.id}, '${item.emp.name}')">${item.emp.name}</td>
-                    <td class="text-center">${item.berangkat}</td>
-                    <td class="text-center" style="color:var(--warning);">${item.izin}</td>
-                    <td class="text-center" style="color:#0284c7;">${item.sakit}</td>
-                    <td class="text-center" style="color:var(--danger); font-weight:bold;">${item.alfa}</td>
-                    <td class="text-center">${item.telat} kali</td>
-                    <td class="text-center">${item.lembur.toFixed(1)} Jam</td>
-                    <td class="text-center" style="font-weight:bold; color:${poinColor};">${item.poin.toFixed(1)}</td>
-                </tr>`;
-            });
+            if(processedList.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center">Tidak ada data pada rentang tanggal ini</td></tr>';
+            } else {
+                processedList.forEach(item => {
+                    sumBerangkat += item.berangkat; sumIzinSakit += (item.izin + item.sakit); sumAlfa += item.alfa; sumPoin += item.poin;
+                    let poinColor = item.poin >= 100 ? 'var(--primary)' : (item.poin >= 80 ? 'var(--info)' : (item.poin >= 60 ? 'var(--warning)' : 'var(--danger)'));
+                    
+                    tbody.innerHTML += `<tr>
+                        <td class="clickable-name" onclick="openDetailPerforma(${item.emp.id}, '${item.emp.name}')">${item.emp.name}</td>
+                        <td class="text-center">${item.berangkat}</td>
+                        <td class="text-center" style="color:var(--warning);">${item.izin}</td>
+                        <td class="text-center" style="color:#0284c7;">${item.sakit}</td>
+                        <td class="text-center" style="color:var(--danger); font-weight:bold;">${item.alfa}</td>
+                        <td class="text-center">${item.telat} kali</td>
+                        <td class="text-center">${item.lembur.toFixed(1)} Jam</td>
+                        <td class="text-center" style="font-weight:bold; color:${poinColor};">${item.poin.toFixed(1)}</td>
+                    </tr>`;
+                });
+            }
 
+            // Update Summary Text
             document.getElementById('perf-tot-berangkat').innerText = sumBerangkat;
             document.getElementById('perf-tot-izinsakit').innerText = sumIzinSakit;
             document.getElementById('perf-tot-alfa').innerText = sumAlfa;
@@ -2938,25 +2978,6 @@
             let win = window.open('', '_blank'); win.document.write(html); win.document.close();
         };
 
-        // ================== LOGIC MAKS POIN POKOK DI PERFORMA ==================
-        // Sisipkan perhitungan Maks Poin ke fungsi renderPerforma
-        const originalRenderPerforma = window.renderPerforma;
-        window.renderPerforma = function() {
-            originalRenderPerforma();
-            
-            // Hitung Maks Poin Pokok
-            let tempD = new Date(dateRangePerforma.start);
-            let endD = new Date(dateRangePerforma.end);
-            let maxPoinPokok = 0;
-            
-            while(tempD <= endD) {
-                let dStr = tempD.getFullYear() + '-' + String(tempD.getMonth()+1).padStart(2,'0') + '-' + String(tempD.getDate()).padStart(2,'0');
-                let t = getTipeHariByDate(dStr);
-                maxPoinPokok += (t === 'Weekend' || t === 'Libur') ? 2 : 1;
-                tempD.setDate(tempD.getDate() + 1);
-            }
-            document.getElementById('perf-max-poin').innerText = maxPoinPokok;
-        };
         
     </script>
 </body>
