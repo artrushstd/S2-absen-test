@@ -546,21 +546,24 @@
 
     <!-- ================== SEMUA MODAL POPUP ================== -->
 
-    <!-- Modal Full Log Aktifitas (Format Tabel) -->
+   <!-- Modal Full Log Aktifitas (Format Tabel) -->
     <div id="modal-log-aktifitas" class="modal" style="z-index: 103;">
-        <div class="modal-content" style="width: 800px; max-width: 95%;">
-            <div class="modal-header">
-                <span>Log Aktifitas Harian</span>
+        <!-- PERUBAHAN: Lebar pop up diperbesar ke 1100px -->
+        <div class="modal-content" style="width: 1100px; max-width: 98%;">
+            <div class="modal-header" style="font-size: 20px;">
+                <span><i class="fa-solid fa-list-check" style="color:var(--primary); margin-right:8px;"></i> Log Aktifitas Sistem Terpusat</span>
                 <i class="fa-solid fa-times" style="cursor:pointer;" onclick="closeLogAktifitas()"></i>
             </div>
-            <div class="table-container" style="max-height: 500px; overflow-y:auto;">
+            <!-- PERUBAHAN: Max-height dinaikkan ke 600px -->
+            <div class="table-container" style="max-height: 600px; overflow-y:auto; padding-right:5px;">
                 <table id="table-log-aktifitas">
                     <thead>
                         <tr>
-                            <th style="width: 5%; text-align:center;">No</th>
-                            <th style="width: 25%;">Info Waktu & User</th>
-                            <th style="width: 20%;">Informasi Target</th>
-                            <th style="width: 50%;">Detail Aktivitas & Perubahan Data</th>
+                            <th style="width: 3%; text-align:center;">No</th>
+                            <th style="width: 17%;">Waktu & User</th>
+                            <th style="width: 15%;">Modul Target</th>
+                            <!-- PERUBAHAN: Lebar kolom detail diperbesar ke 65% -->
+                            <th style="width: 65%;">Detail Aktivitas & Perubahan Data Lengkap</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -2915,16 +2918,28 @@
         
         // 3. Fungsi Bantuan Pembuat Template HTML Log
         function formatLogBlock(title, icon, bgColor, borderColor, textColor, content) {
-            return `<div style="background:${bgColor}; border:1px solid ${borderColor}; padding:8px; border-radius:4px; font-size:12px; width:100%;">
-                <strong style="color:${textColor}; display:block; margin-bottom:4px; border-bottom:1px dashed ${borderColor}; padding-bottom:4px;"><i class="${icon}"></i> ${title}</strong>
-                ${content}
+            return `<div style="background:${bgColor}; border:1px solid ${borderColor}; padding:10px 12px; border-radius:6px; font-size:13px; width:100%;">
+                <strong style="color:${textColor}; display:block; margin-bottom:8px; border-bottom:1px dashed ${borderColor}; padding-bottom:6px;"><i class="${icon}"></i> ${title}</strong>
+                <div style="line-height: 1.6;">${content}</div>
             </div>`;
         }
-        function createBeforeAfterHTML(oldHtml, newHtml) {
-            return `<div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:5px; margin-bottom:5px;">
+        
+        // 4. PERBAIKAN UX: Layout dengan Deskripsi Aksi Spesifik
+        function createBeforeAfterHTML(description, oldHtml, newHtml) {
+            return `<div style="margin-bottom: 12px; font-size: 14px; font-weight: 500; color: var(--text-dark); background: var(--bg-body); padding: 10px 14px; border-left: 4px solid var(--primary); border-radius: 4px;">
+                <i class="fa-solid fa-circle-info" style="color:var(--primary); margin-right:6px;"></i> ${description}
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:10px;">
                 ${formatLogBlock('SEBELUM (Data Lama)', 'fa-solid fa-clock-rotate-left', '#fee2e2', '#f87171', '#b91c1c', oldHtml)}
                 ${formatLogBlock('SESUDAH (Data Baru)', 'fa-solid fa-check-double', '#d1fae5', '#34d399', '#047857', newHtml)}
             </div>`;
+        }
+        
+        function createSingleHTML(description, title, icon, bgColor, borderColor, textColor, content) {
+            return `<div style="margin-bottom: 12px; font-size: 14px; font-weight: 500; color: var(--text-dark); background: var(--bg-body); padding: 10px 14px; border-left: 4px solid ${borderColor}; border-radius: 4px;">
+                <i class="fa-solid fa-circle-info" style="color:${textColor}; margin-right:6px;"></i> ${description}
+            </div>
+            ${formatLogBlock(title, icon, bgColor, borderColor, textColor, content)}`;
         }
         
         // --- LOG EDIT & TAMBAH KARYAWAN ---
@@ -2945,14 +2960,16 @@
             
             try {
                 if (editId && oldData) {
+                    let desc = `Memperbarui data profil dan status operasional pada karyawan <strong>${oldData.name}</strong>.`;
                     let oldHtml = `Nama: ${oldData.name}<br>Jabatan: ${oldData.jabatan||'-'}<br>Tipe Pegawai: ${oldData.status_pegawai||'-'}<br>Gaji Pokok: ${formatUangLog(oldData.gaji_per_poin_pokok)}<br>Status BPJS: ${oldData.status_bpjs}<br>Status Kerja: ${oldData.status_kerja||'Aktif'}`;
                     let newHtml = `Nama: ${name}<br>Jabatan: ${jabatan}<br>Tipe Pegawai: ${tipePegawai}<br>Gaji Pokok: ${formatUangLog(gajiBaru)}<br>Status BPJS: ${bpjsBaru}<br>Status Kerja: ${statusBaru}`;
-                    await catatLogSistem('EDIT', `Data Karyawan`, createBeforeAfterHTML(oldHtml, newHtml));
+                    await catatLogSistem('EDIT', `Data Karyawan`, createBeforeAfterHTML(desc, oldHtml, newHtml));
                 } else {
+                    let desc = `Mendaftarkan karyawan baru ke dalam sistem database dengan nama <strong>${name}</strong>.`;
                     let newHtml = `Nama: ${name}<br>ID Mesin: ${idMesin}<br>Jabatan: ${jabatan}<br>Tipe Pegawai: ${tipePegawai}<br>Gaji Pokok: ${formatUangLog(gajiBaru)}`;
-                    await catatLogSistem('TAMBAH', `Data Karyawan`, formatLogBlock('DATA DITAMBAHKAN', 'fa-solid fa-plus', '#d1fae5', '#34d399', '#047857', newHtml));
+                    await catatLogSistem('TAMBAH', `Data Karyawan`, createSingleHTML(desc, 'DATA DITAMBAHKAN', 'fa-solid fa-user-plus', '#d1fae5', '#34d399', '#047857', newHtml));
                 }
-            } catch(err) { console.error("Gagal generate log karyawan: ", err); }
+            } catch(err) {}
         };
         
         // --- LOG HAPUS KARYAWAN ---
@@ -2962,8 +2979,9 @@
             await originalDeleteKaryawan(empId, empName);
             try {
                 if(oldData && !db_karyawan.find(k => k.id == empId)) {
+                    let desc = `Menghapus data karyawan bernama <strong>${oldData.name}</strong> beserta seluruh aksesnya dari sistem.`;
                     let oldHtml = `Nama: ${oldData.name}<br>ID Mesin: ${oldData.id}<br>Jabatan: ${oldData.jabatan||'-'}<br>Gaji Pokok: ${formatUangLog(oldData.gaji_per_poin_pokok)}`;
-                    await catatLogSistem('HAPUS', `Data Karyawan`, formatLogBlock('DATA DIHAPUS PERMANEN', 'fa-solid fa-trash', '#fee2e2', '#f87171', '#b91c1c', oldHtml));
+                    await catatLogSistem('HAPUS', `Data Karyawan`, createSingleHTML(desc, 'DATA DIHAPUS PERMANEN', 'fa-solid fa-trash', '#fee2e2', '#f87171', '#b91c1c', oldHtml));
                 }
             } catch(err) {}
         };
@@ -2978,9 +2996,10 @@
             
             await originalSaveTipeHari();
             try {
+                let desc = `Mengubah tipe hari (pengaturan pengali poin gaji) untuk tanggal <strong>${date}</strong>.`;
                 let oldHtml = `Tanggal: ${date}<br>Tipe Hari: <strong>${oldTipe}</strong>`;
                 let newHtml = `Tanggal: ${date}<br>Tipe Hari: <strong>${newTipe}</strong>`;
-                await catatLogSistem('UBAH', `Kalender Tipe Hari`, createBeforeAfterHTML(oldHtml, newHtml));
+                await catatLogSistem('UBAH', `Kalender Tipe Hari`, createBeforeAfterHTML(desc, oldHtml, newHtml));
             } catch(err) {}
         };
         
@@ -3000,9 +3019,10 @@
             
             await originalSaveEditAbsensi();
             try {
+                let desc = `Melakukan override/edit manual pada nilai poin absensi milik <strong>${name}</strong> di tanggal <strong>${date}</strong>.`;
                 let oldHtml = `Karyawan: ${name}<br>Tanggal: ${date}<br>Poin Pokok: <strong>${oldP}</strong><br>Poin Ekstra: <strong>${oldE}</strong>`;
                 let newHtml = `Karyawan: ${name}<br>Tanggal: ${date}<br>Poin Pokok: <strong>${newP}</strong><br>Poin Ekstra: <strong>${newE}</strong>`;
-                await catatLogSistem('EDIT', `Override Poin Absensi`, createBeforeAfterHTML(oldHtml, newHtml));
+                await catatLogSistem('EDIT', `Override Poin Absensi`, createBeforeAfterHTML(desc, oldHtml, newHtml));
             } catch(err) {}
         };
         
@@ -3023,9 +3043,11 @@
                 if (updated) {
                     let newHtml = `Jam Masuk: ${updated.clock_in||'-'}<br>Jam Keluar: ${updated.clock_out||'-'}<br>Status: ${updated.status_absen||'Hadir'}<br>Keterangan: ${updated.keterangan||'-'}`;
                     if (existing) {
-                        await catatLogSistem('EDIT', `Data Absensi: ${empName} (${date})`, createBeforeAfterHTML(oldHtml, newHtml));
+                        let desc = `Memperbarui data kehadiran (absensi) milik <strong>${empName}</strong> untuk tanggal <strong>${date}</strong>.`;
+                        await catatLogSistem('EDIT', `Data Absensi`, createBeforeAfterHTML(desc, oldHtml, newHtml));
                     } else {
-                        await catatLogSistem('TAMBAH', `Absensi Manual: ${empName}`, formatLogBlock('DATA ABSENSI BARU', 'fa-solid fa-plus', '#d1fae5', '#34d399', '#047857', `Tanggal: ${date}<br>${newHtml}`));
+                        let desc = `Memasukkan rekaman data absensi secara manual untuk <strong>${empName}</strong> di tanggal <strong>${date}</strong>.`;
+                        await catatLogSistem('TAMBAH', `Absensi Manual`, createSingleHTML(desc, 'DATA ABSENSI BARU', 'fa-solid fa-calendar-plus', '#d1fae5', '#34d399', '#047857', newHtml));
                     }
                 }
             } catch(err) {}
@@ -3038,8 +3060,9 @@
             await originalDeleteAbsensi(empId, date, empName);
             try {
                 if(oldData && !db_absensi.find(a => a.emp_id == empId && a.date === date)) {
+                    let desc = `Menghapus riwayat log kehadiran/absensi milik <strong>${empName}</strong> pada tanggal <strong>${date}</strong>.`;
                     let oldHtml = `Karyawan: ${empName}<br>Tanggal: ${date}<br>Jam Masuk: ${oldData.clock_in||'-'} | Jam Keluar: ${oldData.clock_out||'-'}<br>Status: <strong>${oldData.status_absen||'Hadir'}</strong><br>Keterangan: ${oldData.keterangan||'-'}`;
-                    await catatLogSistem('HAPUS', `Data Absensi`, formatLogBlock('DATA ABSENSI DIHAPUS', 'fa-solid fa-trash', '#fee2e2', '#f87171', '#b91c1c', oldHtml));
+                    await catatLogSistem('HAPUS', `Data Absensi`, createSingleHTML(desc, 'DATA ABSENSI DIHAPUS', 'fa-solid fa-calendar-xmark', '#fee2e2', '#f87171', '#b91c1c', oldHtml));
                 }
             } catch(err) {}
         };
@@ -3055,9 +3078,10 @@
             try {
                 let empAfter = db_karyawan.find(e => e.id === empId);
                 if(empAfter.sp_level === level || (level === 'NONE' && empAfter.sp_level === 'NONE')) {
-                    let oldHtml = `Karyawan: ${emp.name}<br>Status SP: <strong>${oldLevel}</strong>`;
-                    let newHtml = `Karyawan: ${emp.name}<br>Status SP: <strong>${level}</strong>`;
-                    await catatLogSistem('EDIT', `Status SP Karyawan`, createBeforeAfterHTML(oldHtml, newHtml));
+                    let desc = `Memperbarui tingkatan Surat Peringatan (SP) untuk karyawan bernama <strong>${emp.name}</strong>.`;
+                    let oldHtml = `Karyawan: ${emp.name}<br>Status SP Saat Ini: <strong>${oldLevel}</strong>`;
+                    let newHtml = `Karyawan: ${emp.name}<br>Status SP Menjadi: <strong>${level}</strong>`;
+                    await catatLogSistem('EDIT', `Status SP Karyawan`, createBeforeAfterHTML(desc, oldHtml, newHtml));
                 }
             } catch(err) {}
         };
@@ -3081,9 +3105,10 @@
         
             await originalSaveBonus();
             try {
+                let desc = `Memperbarui nominal Gaji Pokok atau Tambahan Bonus Payroll pada periode ini untuk <strong>${name}</strong>.`;
                 let oldHtml = `Karyawan: ${name}<br>Gaji Pokok Total: ${oldGPokok}<br>Poin Bonus: ${oldPBonus}<br>Nominal Bonus: ${oldGBonus}`;
                 let newHtml = `Karyawan: ${name}<br>Gaji Pokok Total: ${newGPokok}<br>Poin Bonus: ${newPBonus}<br>Nominal Bonus: ${newGBonus}`;
-                await catatLogSistem('EDIT', `Detail Payroll & Bonus`, createBeforeAfterHTML(oldHtml, newHtml));
+                await catatLogSistem('EDIT', `Detail Payroll & Bonus`, createBeforeAfterHTML(desc, oldHtml, newHtml));
             } catch(err) {}
         };
         
@@ -3099,8 +3124,9 @@
             await originalSaveKasbon();
             try {
                 if(db_kasbon.length > beforeCount && tot) {
+                    let desc = `Mengeluarkan dana perusahaan untuk pinjaman (Kasbon) baru kepada karyawan <strong>${emp?emp.name:'ID '+empId}</strong>.`;
                     let newHtml = `Karyawan: ${emp?emp.name:'ID '+empId}<br>Tanggal Pinjaman: ${tgl}<br>Total Pinjaman: <strong>${formatUangLog(tot)}</strong>`;
-                    await catatLogSistem('TAMBAH', `Kasbon Karyawan`, formatLogBlock('KASBON BARU DIBERIKAN', 'fa-solid fa-plus', '#d1fae5', '#34d399', '#047857', newHtml));
+                    await catatLogSistem('TAMBAH', `Kasbon Karyawan`, createSingleHTML(desc, 'KASBON BARU DIBERIKAN', 'fa-solid fa-hand-holding-dollar', '#d1fae5', '#34d399', '#047857', newHtml));
                 }
             } catch(err) {}
         };
@@ -3115,8 +3141,9 @@
             await originalSaveAngsuran();
             try {
                 if(db_angsuran.length > beforeCount && nom) {
+                    let desc = `Menerima dana pembayaran angsuran kasbon/cicilan dari karyawan <strong>${emp?emp.name:'-'}</strong>.`;
                     let newHtml = `Karyawan: ${emp?emp.name:'-'}<br>Pembayaran: <strong>${formatUangLog(nom)}</strong>`;
-                    await catatLogSistem('BAYAR', `Angsuran Kasbon`, formatLogBlock('PEMBAYARAN DITERIMA', 'fa-solid fa-hand-holding-dollar', '#d1fae5', '#34d399', '#047857', newHtml));
+                    await catatLogSistem('BAYAR', `Angsuran Kasbon`, createSingleHTML(desc, 'PEMBAYARAN DITERIMA', 'fa-solid fa-money-bill-wave', '#d1fae5', '#34d399', '#047857', newHtml));
                 }
             } catch(err) {}
         };
@@ -3129,8 +3156,9 @@
             await originalDeleteKasbon(kasbonId, isHistory);
             try {
                 if(kasbonData && !db_kasbon.find(k => k.id == kasbonId)) {
+                    let desc = `Menghapus seluruh data pinjaman kasbon dan riwayat angsurannya atas nama <strong>${emp?emp.name:'-'}</strong> dari sistem.`;
                     let oldHtml = `Karyawan: ${emp?emp.name:'-'}<br>Total Pinjaman Awal: ${formatUangLog(kasbonData.total_pinjaman)}`;
-                    await catatLogSistem('HAPUS', `Data Kasbon`, formatLogBlock('KASBON & ANGSURAN DIHAPUS', 'fa-solid fa-trash', '#fee2e2', '#f87171', '#b91c1c', oldHtml));
+                    await catatLogSistem('HAPUS', `Data Kasbon`, createSingleHTML(desc, 'KASBON & ANGSURAN DIHAPUS', 'fa-solid fa-trash', '#fee2e2', '#f87171', '#b91c1c', oldHtml));
                 }
             } catch(err) {}
         };
