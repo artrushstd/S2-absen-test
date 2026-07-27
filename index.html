@@ -99,8 +99,26 @@
     .search-wrapper i.fa-xmark { position: absolute; right: 12px; color: var(--text-muted); cursor: pointer; display: none; padding: 4px; transition: 0.2s; }
     .search-wrapper i.fa-xmark:hover { color: var(--danger); }
 
-    .input-control { padding: 10px 14px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 14px; outline: none; background: var(--card-bg); color: var(--text-dark); transition: 0.2s; width: 100%; box-sizing: border-box; }
+    .input-control { padding: 10px 14px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 14px; outline: none; background: var(--card-bg); color: var(--text-dark); transition: 0.2s; box-sizing: border-box; }
     .input-control:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(41, 124, 63, 0.15); }
+
+    /* Paksa input di dalam Form Modal (Pop up) agar tetap full 100% */
+    .form-group input, 
+    .form-group select, 
+    .form-group .input-control {
+        width: 100%;
+    }
+
+    /* Penyesuaian khusus untuk Baris Filter di Desktop */
+    @media screen and (min-width: 769px) {
+        .filter-bar .input-control {
+            min-width: 240px; /* Lebar ideal untuk input rentang tanggal */
+            width: auto;
+        }
+        .filter-bar select.input-control {
+            min-width: 150px; /* Lebar ideal untuk dropdown pilihan */
+        }
+    }
 
     .quick-actions, .filter-bar { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; align-items: center; }
     .btn { padding: 10px 16px; border-radius: var(--radius-md); font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
