@@ -1600,10 +1600,32 @@
         // Fungsi Penulis Log ke Supabase
         window.catatLogSistem = async function(action, target, details) {
             let user = "Admin";
-            try { let auth = JSON.parse(sessionStorage.getItem('auth_user')); if(auth) user = auth.name; } catch(e){}
-            let payload = { username: user, action: action, target: target, details: details };
+            try { 
+                let auth = JSON.parse(sessionStorage.getItem('auth_user')); 
+                if(auth) user = auth.name; 
+            } catch(e){}
+            
+            // PERBAIKAN: Sisipkan timestamp dari Frontend agar tidak ditolak Supabase
+            let payload = { 
+                username: user, 
+                action: action, 
+                target: target, 
+                details: details,
+                timestamp: new Date().toISOString() 
+            };
+            
             const { data, error } = await supabaseApp.from('log_sistem').insert([payload]).select();
-            if(!error && data) { db_logs.unshift(data[0]); renderDashboardLogs(); }
+            
+            // PERBAIKAN: Jika gagal, sistem akan memunculkan peringatan (tidak diam saja)
+            if (error) {
+                alert("GAGAL MENYIMPAN LOG KE DATABASE!\n\nAlasan: " + error.message + "\n\nCek pengaturan tabel log_sistem di Supabase Anda.");
+                console.error("Error Log:", error);
+            } 
+            
+            if (!error && data) { 
+                db_logs.unshift(data[0]); 
+                renderDashboardLogs(); 
+            }
         };
 
         window.renderDashboardLogs = function() {
