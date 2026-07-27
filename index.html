@@ -2896,8 +2896,24 @@
         }
 
         // ================== INJEKSI LOG SISTEM KE FUNGSI CRUD (FULL DETAIL BEFORE-AFTER) ==================
+
+        // 1. Helper Format Uang Lokal (Menghindari Scope Crash)
+        const formatUangLog = function(angka) { 
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(angka || 0); 
+        };
         
-        // Fungsi Bantuan Pembuat Template HTML Log
+        // 2. Helper Cek SP Lokal
+        const getSPLokal = function(emp) {
+            let spLevel = emp.sp_level || 'NONE';
+            if (emp.sp_date) {
+                let spD = new Date(emp.sp_date);
+                let limitD = new Date(); limitD.setMonth(limitD.getMonth() - 6);
+                if (spD < limitD) spLevel = 'NONE';
+            }
+            return spLevel;
+        }
+        
+        // 3. Fungsi Bantuan Pembuat Template HTML Log
         function formatLogBlock(title, icon, bgColor, borderColor, textColor, content) {
             return `<div style="background:${bgColor}; border:1px solid ${borderColor}; padding:8px; border-radius:4px; font-size:12px; width:100%;">
                 <strong style="color:${textColor}; display:block; margin-bottom:4px; border-bottom:1px dashed ${borderColor}; padding-bottom:4px;"><i class="${icon}"></i> ${title}</strong>
@@ -2910,8 +2926,8 @@
                 ${formatLogBlock('SESUDAH (Data Baru)', 'fa-solid fa-check-double', '#d1fae5', '#34d399', '#047857', newHtml)}
             </div>`;
         }
-
-        // 1. Log Edit & Tambah Karyawan
+        
+        // --- LOG EDIT & TAMBAH KARYAWAN ---
         const originalSaveKaryawan = window.saveKaryawan;
         window.saveKaryawan = async function() { 
             let editId = document.getElementById('edit-emp-id').value;
@@ -2924,30 +2940,35 @@
             let statusBaru = document.getElementById('new-emp-status').value;
             
             let oldData = editId ? db_karyawan.find(k => k.id == editId) : null;
+            
             await originalSaveKaryawan(); 
             
-            if (editId && oldData) {
-                let oldHtml = `Nama: ${oldData.name}<br>Jabatan: ${oldData.jabatan||'-'}<br>Tipe Pegawai: ${oldData.status_pegawai||'-'}<br>Gaji Pokok: ${formatRp(oldData.gaji_per_poin_pokok)}<br>Status BPJS: ${oldData.status_bpjs}<br>Status Kerja: ${oldData.status_kerja||'Aktif'}`;
-                let newHtml = `Nama: ${name}<br>Jabatan: ${jabatan}<br>Tipe Pegawai: ${tipePegawai}<br>Gaji Pokok: ${formatRp(gajiBaru)}<br>Status BPJS: ${bpjsBaru}<br>Status Kerja: ${statusBaru}`;
-                catatLogSistem('EDIT', `Data Karyawan`, createBeforeAfterHTML(oldHtml, newHtml));
-            } else {
-                let newHtml = `Nama: ${name}<br>ID Mesin: ${idMesin}<br>Jabatan: ${jabatan}<br>Tipe Pegawai: ${tipePegawai}<br>Gaji Pokok: ${formatRp(gajiBaru)}`;
-                catatLogSistem('TAMBAH', `Data Karyawan`, formatLogBlock('DATA DITAMBAHKAN', 'fa-solid fa-plus', '#d1fae5', '#34d399', '#047857', newHtml));
-            }
+            try {
+                if (editId && oldData) {
+                    let oldHtml = `Nama: ${oldData.name}<br>Jabatan: ${oldData.jabatan||'-'}<br>Tipe Pegawai: ${oldData.status_pegawai||'-'}<br>Gaji Pokok: ${formatUangLog(oldData.gaji_per_poin_pokok)}<br>Status BPJS: ${oldData.status_bpjs}<br>Status Kerja: ${oldData.status_kerja||'Aktif'}`;
+                    let newHtml = `Nama: ${name}<br>Jabatan: ${jabatan}<br>Tipe Pegawai: ${tipePegawai}<br>Gaji Pokok: ${formatUangLog(gajiBaru)}<br>Status BPJS: ${bpjsBaru}<br>Status Kerja: ${statusBaru}`;
+                    await catatLogSistem('EDIT', `Data Karyawan`, createBeforeAfterHTML(oldHtml, newHtml));
+                } else {
+                    let newHtml = `Nama: ${name}<br>ID Mesin: ${idMesin}<br>Jabatan: ${jabatan}<br>Tipe Pegawai: ${tipePegawai}<br>Gaji Pokok: ${formatUangLog(gajiBaru)}`;
+                    await catatLogSistem('TAMBAH', `Data Karyawan`, formatLogBlock('DATA DITAMBAHKAN', 'fa-solid fa-plus', '#d1fae5', '#34d399', '#047857', newHtml));
+                }
+            } catch(err) { console.error("Gagal generate log karyawan: ", err); }
         };
-
-        // 2. Log Hapus Karyawan
+        
+        // --- LOG HAPUS KARYAWAN ---
         const originalDeleteKaryawan = window.deleteKaryawan;
         window.deleteKaryawan = async function(empId, empName) {
             let oldData = db_karyawan.find(k => k.id == empId);
             await originalDeleteKaryawan(empId, empName);
-            if(oldData && !db_karyawan.find(k => k.id == empId)) {
-                let oldHtml = `Nama: ${oldData.name}<br>ID Mesin: ${oldData.id}<br>Jabatan: ${oldData.jabatan||'-'}<br>Gaji Pokok: ${formatRp(oldData.gaji_per_poin_pokok)}`;
-                catatLogSistem('HAPUS', `Data Karyawan`, formatLogBlock('DATA DIHAPUS PERMANEN', 'fa-solid fa-trash', '#fee2e2', '#f87171', '#b91c1c', oldHtml));
-            }
+            try {
+                if(oldData && !db_karyawan.find(k => k.id == empId)) {
+                    let oldHtml = `Nama: ${oldData.name}<br>ID Mesin: ${oldData.id}<br>Jabatan: ${oldData.jabatan||'-'}<br>Gaji Pokok: ${formatUangLog(oldData.gaji_per_poin_pokok)}`;
+                    await catatLogSistem('HAPUS', `Data Karyawan`, formatLogBlock('DATA DIHAPUS PERMANEN', 'fa-solid fa-trash', '#fee2e2', '#f87171', '#b91c1c', oldHtml));
+                }
+            } catch(err) {}
         };
-
-        // 3. Log Ubah Tipe Hari (Kalender)
+        
+        // --- LOG UBAH TIPE HARI ---
         const originalSaveTipeHari = window.saveTipeHari;
         window.saveTipeHari = async function() {
             let date = document.getElementById('modal-tipe-date').value;
@@ -2956,12 +2977,14 @@
             let oldTipe = oldData ? oldData.tipe_hari : 'Normal/Sistem';
             
             await originalSaveTipeHari();
-            let oldHtml = `Tanggal: ${date}<br>Tipe Hari: <strong>${oldTipe}</strong>`;
-            let newHtml = `Tanggal: ${date}<br>Tipe Hari: <strong>${newTipe}</strong>`;
-            catatLogSistem('UBAH', `Kalender Tipe Hari`, createBeforeAfterHTML(oldHtml, newHtml));
+            try {
+                let oldHtml = `Tanggal: ${date}<br>Tipe Hari: <strong>${oldTipe}</strong>`;
+                let newHtml = `Tanggal: ${date}<br>Tipe Hari: <strong>${newTipe}</strong>`;
+                await catatLogSistem('UBAH', `Kalender Tipe Hari`, createBeforeAfterHTML(oldHtml, newHtml));
+            } catch(err) {}
         };
-
-        // 4. Log Edit Poin Absen Manual
+        
+        // --- LOG EDIT ABSEN MANUAL ---
         const originalSaveEditAbsensi = window.saveEditAbsensi;
         window.saveEditAbsensi = async function() {
             let empId = document.getElementById('edit-absensi-emp-id').value;
@@ -2976,63 +2999,70 @@
             let newE = document.getElementById('edit-absensi-ekstra').value || 'Otomatis Kalkulator';
             
             await originalSaveEditAbsensi();
-            let oldHtml = `Karyawan: ${name}<br>Tanggal: ${date}<br>Poin Pokok: <strong>${oldP}</strong><br>Poin Ekstra: <strong>${oldE}</strong>`;
-            let newHtml = `Karyawan: ${name}<br>Tanggal: ${date}<br>Poin Pokok: <strong>${newP}</strong><br>Poin Ekstra: <strong>${newE}</strong>`;
-            catatLogSistem('EDIT', `Override Poin Absensi`, createBeforeAfterHTML(oldHtml, newHtml));
+            try {
+                let oldHtml = `Karyawan: ${name}<br>Tanggal: ${date}<br>Poin Pokok: <strong>${oldP}</strong><br>Poin Ekstra: <strong>${oldE}</strong>`;
+                let newHtml = `Karyawan: ${name}<br>Tanggal: ${date}<br>Poin Pokok: <strong>${newP}</strong><br>Poin Ekstra: <strong>${newE}</strong>`;
+                await catatLogSistem('EDIT', `Override Poin Absensi`, createBeforeAfterHTML(oldHtml, newHtml));
+            } catch(err) {}
         };
-
-        // 5. Log Tambah Absensi Manual (Hadir/Izin/Sakit/Alfa)
+        
+        // --- LOG TAMBAH ABSENSI MANUAL ---
         const originalExecuteSaveAbsensi = window.executeSaveAbsensi;
         window.executeSaveAbsensi = async function() {
             let empId = parseInt(document.getElementById('manual-abs-emp').value);
             let date = document.getElementById('manual-abs-date').value;
-            let empName = document.getElementById('manual-abs-emp').options[document.getElementById('manual-abs-emp').selectedIndex].text;
+            let selObj = document.getElementById('manual-abs-emp');
+            let empName = selObj.options[selObj.selectedIndex].text;
             
             let existing = db_absensi.find(a => a.emp_id === empId && a.date === date);
             let oldHtml = existing ? `Jam Masuk: ${existing.clock_in||'-'}<br>Jam Keluar: ${existing.clock_out||'-'}<br>Status: ${existing.status_absen||'Hadir'}<br>Keterangan: ${existing.keterangan||'-'}` : null;
             
             await originalExecuteSaveAbsensi();
-            
-            let updated = db_absensi.find(a => a.emp_id === empId && a.date === date);
-            if (updated) {
-                let newHtml = `Jam Masuk: ${updated.clock_in||'-'}<br>Jam Keluar: ${updated.clock_out||'-'}<br>Status: ${updated.status_absen||'Hadir'}<br>Keterangan: ${updated.keterangan||'-'}`;
-                if (existing) {
-                    catatLogSistem('EDIT', `Data Absensi: ${empName} (${date})`, createBeforeAfterHTML(oldHtml, newHtml));
-                } else {
-                    catatLogSistem('TAMBAH', `Absensi Manual: ${empName}`, formatLogBlock('DATA ABSENSI BARU', 'fa-solid fa-plus', '#d1fae5', '#34d399', '#047857', `Tanggal: ${date}<br>${newHtml}`));
+            try {
+                let updated = db_absensi.find(a => a.emp_id === empId && a.date === date);
+                if (updated) {
+                    let newHtml = `Jam Masuk: ${updated.clock_in||'-'}<br>Jam Keluar: ${updated.clock_out||'-'}<br>Status: ${updated.status_absen||'Hadir'}<br>Keterangan: ${updated.keterangan||'-'}`;
+                    if (existing) {
+                        await catatLogSistem('EDIT', `Data Absensi: ${empName} (${date})`, createBeforeAfterHTML(oldHtml, newHtml));
+                    } else {
+                        await catatLogSistem('TAMBAH', `Absensi Manual: ${empName}`, formatLogBlock('DATA ABSENSI BARU', 'fa-solid fa-plus', '#d1fae5', '#34d399', '#047857', `Tanggal: ${date}<br>${newHtml}`));
+                    }
                 }
-            }
+            } catch(err) {}
         };
-
-        // 6. Log Hapus Absensi
+        
+        // --- LOG HAPUS ABSENSI ---
         const originalDeleteAbsensi = window.deleteAbsensi;
         window.deleteAbsensi = async function(empId, date, empName) {
             let oldData = db_absensi.find(a => a.emp_id == empId && a.date === date);
             await originalDeleteAbsensi(empId, date, empName);
-            if(oldData && !db_absensi.find(a => a.emp_id == empId && a.date === date)) {
-                let oldHtml = `Karyawan: ${empName}<br>Tanggal: ${date}<br>Jam Masuk: ${oldData.clock_in||'-'} | Jam Keluar: ${oldData.clock_out||'-'}<br>Status: <strong>${oldData.status_absen||'Hadir'}</strong><br>Keterangan: ${oldData.keterangan||'-'}`;
-                catatLogSistem('HAPUS', `Data Absensi`, formatLogBlock('DATA ABSENSI DIHAPUS', 'fa-solid fa-trash', '#fee2e2', '#f87171', '#b91c1c', oldHtml));
-            }
+            try {
+                if(oldData && !db_absensi.find(a => a.emp_id == empId && a.date === date)) {
+                    let oldHtml = `Karyawan: ${empName}<br>Tanggal: ${date}<br>Jam Masuk: ${oldData.clock_in||'-'} | Jam Keluar: ${oldData.clock_out||'-'}<br>Status: <strong>${oldData.status_absen||'Hadir'}</strong><br>Keterangan: ${oldData.keterangan||'-'}`;
+                    await catatLogSistem('HAPUS', `Data Absensi`, formatLogBlock('DATA ABSENSI DIHAPUS', 'fa-solid fa-trash', '#fee2e2', '#f87171', '#b91c1c', oldHtml));
+                }
+            } catch(err) {}
         };
-
-        // 7. Log Pemberian SP
+        
+        // --- LOG SP ---
         const originalAssignSP = window.assignSP;
         window.assignSP = async function(level) {
             let empId = currentSPEmpId;
             let emp = db_karyawan.find(e => e.id === empId);
-            let oldLevel = getActiveSPLevel(emp);
+            let oldLevel = getSPLokal(emp);
             
             await originalAssignSP(level);
-            
-            let empAfter = db_karyawan.find(e => e.id === empId);
-            if(empAfter.sp_level === level || (level === 'NONE' && empAfter.sp_level === 'NONE')) {
-                let oldHtml = `Karyawan: ${emp.name}<br>Status SP: <strong>${oldLevel}</strong>`;
-                let newHtml = `Karyawan: ${emp.name}<br>Status SP: <strong>${level}</strong>`;
-                catatLogSistem('EDIT', `Status SP Karyawan`, createBeforeAfterHTML(oldHtml, newHtml));
-            }
+            try {
+                let empAfter = db_karyawan.find(e => e.id === empId);
+                if(empAfter.sp_level === level || (level === 'NONE' && empAfter.sp_level === 'NONE')) {
+                    let oldHtml = `Karyawan: ${emp.name}<br>Status SP: <strong>${oldLevel}</strong>`;
+                    let newHtml = `Karyawan: ${emp.name}<br>Status SP: <strong>${level}</strong>`;
+                    await catatLogSistem('EDIT', `Status SP Karyawan`, createBeforeAfterHTML(oldHtml, newHtml));
+                }
+            } catch(err) {}
         };
-
-        // 8. Log Edit Payroll Bonus
+        
+        // --- LOG PAYROLL BONUS ---
         const originalSaveBonus = window.saveBonus;
         window.saveBonus = async function() {
             let empId = currentEditEmpId;
@@ -3040,22 +3070,24 @@
             let bonusKey = empId + "_" + dateRangePayroll.start; 
             let b = db_bonus[bonusKey] || {}; 
             
-            let oldGPokok = b.gaji_pokok_override !== null && b.gaji_pokok_override !== undefined ? formatRp(b.gaji_pokok_override) : 'Auto Sistem';
+            let oldGPokok = b.gaji_pokok_override !== null && b.gaji_pokok_override !== undefined ? formatUangLog(b.gaji_pokok_override) : 'Auto Sistem';
             let oldPBonus = b.poin || 0;
-            let oldGBonus = b.nominal ? formatRp(b.nominal) : 'Rp 0,00';
+            let oldGBonus = b.nominal ? formatUangLog(b.nominal) : 'Rp 0,00';
             
             let inG = document.getElementById('modal-gaji-pokok').value; 
-            let newGPokok = inG !== '' ? formatRp(inG) : 'Auto Sistem';
+            let newGPokok = inG !== '' ? formatUangLog(inG) : 'Auto Sistem';
             let newPBonus = document.getElementById('modal-poin-bonus').value || 0;
-            let newGBonus = formatRp(document.getElementById('modal-gaji-bonus').value || 0);
-
+            let newGBonus = formatUangLog(document.getElementById('modal-gaji-bonus').value || 0);
+        
             await originalSaveBonus();
-            let oldHtml = `Karyawan: ${name}<br>Gaji Pokok Total: ${oldGPokok}<br>Poin Bonus: ${oldPBonus}<br>Nominal Bonus: ${oldGBonus}`;
-            let newHtml = `Karyawan: ${name}<br>Gaji Pokok Total: ${newGPokok}<br>Poin Bonus: ${newPBonus}<br>Nominal Bonus: ${newGBonus}`;
-            catatLogSistem('EDIT', `Detail Payroll & Bonus`, createBeforeAfterHTML(oldHtml, newHtml));
+            try {
+                let oldHtml = `Karyawan: ${name}<br>Gaji Pokok Total: ${oldGPokok}<br>Poin Bonus: ${oldPBonus}<br>Nominal Bonus: ${oldGBonus}`;
+                let newHtml = `Karyawan: ${name}<br>Gaji Pokok Total: ${newGPokok}<br>Poin Bonus: ${newPBonus}<br>Nominal Bonus: ${newGBonus}`;
+                await catatLogSistem('EDIT', `Detail Payroll & Bonus`, createBeforeAfterHTML(oldHtml, newHtml));
+            } catch(err) {}
         };
-
-        // 9. Log Kasbon & Angsuran
+        
+        // --- LOG KASBON ---
         const originalSaveKasbon = window.saveKasbon;
         window.saveKasbon = async function() {
             let empId = document.getElementById('kasbon-emp-id').value;
@@ -3063,35 +3095,44 @@
             let tot = document.getElementById('kasbon-total').value;
             let tgl = document.getElementById('kasbon-tanggal').value;
             let beforeCount = db_kasbon.length;
+            
             await originalSaveKasbon();
-            if(db_kasbon.length > beforeCount && tot) {
-                let newHtml = `Karyawan: ${emp?emp.name:'ID '+empId}<br>Tanggal Pinjaman: ${tgl}<br>Total Pinjaman: <strong>${formatRp(tot)}</strong>`;
-                catatLogSistem('TAMBAH', `Kasbon Karyawan`, formatLogBlock('KASBON BARU DIBERIKAN', 'fa-solid fa-plus', '#d1fae5', '#34d399', '#047857', newHtml));
-            }
+            try {
+                if(db_kasbon.length > beforeCount && tot) {
+                    let newHtml = `Karyawan: ${emp?emp.name:'ID '+empId}<br>Tanggal Pinjaman: ${tgl}<br>Total Pinjaman: <strong>${formatUangLog(tot)}</strong>`;
+                    await catatLogSistem('TAMBAH', `Kasbon Karyawan`, formatLogBlock('KASBON BARU DIBERIKAN', 'fa-solid fa-plus', '#d1fae5', '#34d399', '#047857', newHtml));
+                }
+            } catch(err) {}
         };
-
+        
         const originalSaveAngsuran = window.saveAngsuran;
         window.saveAngsuran = async function() {
             let nom = document.getElementById('input-nominal-angsuran').value;
             let kasbonData = db_kasbon.find(k => k.id == currentKasbonId);
             let emp = kasbonData ? db_karyawan.find(e => e.id == kasbonData.emp_id) : null;
             let beforeCount = db_angsuran.length;
+            
             await originalSaveAngsuran();
-            if(db_angsuran.length > beforeCount && nom) {
-                let newHtml = `Karyawan: ${emp?emp.name:'-'}<br>Pembayaran: <strong>${formatRp(nom)}</strong>`;
-                catatLogSistem('BAYAR', `Angsuran Kasbon`, formatLogBlock('PEMBAYARAN DITERIMA', 'fa-solid fa-hand-holding-dollar', '#d1fae5', '#34d399', '#047857', newHtml));
-            }
+            try {
+                if(db_angsuran.length > beforeCount && nom) {
+                    let newHtml = `Karyawan: ${emp?emp.name:'-'}<br>Pembayaran: <strong>${formatUangLog(nom)}</strong>`;
+                    await catatLogSistem('BAYAR', `Angsuran Kasbon`, formatLogBlock('PEMBAYARAN DITERIMA', 'fa-solid fa-hand-holding-dollar', '#d1fae5', '#34d399', '#047857', newHtml));
+                }
+            } catch(err) {}
         };
-
+        
         const originalDeleteKasbon = window.deleteKasbon;
         window.deleteKasbon = async function(kasbonId, isHistory) {
             let kasbonData = db_kasbon.find(k => k.id == kasbonId);
             let emp = kasbonData ? db_karyawan.find(e => e.id == kasbonData.emp_id) : null;
+            
             await originalDeleteKasbon(kasbonId, isHistory);
-            if(kasbonData && !db_kasbon.find(k => k.id == kasbonId)) {
-                let oldHtml = `Karyawan: ${emp?emp.name:'-'}<br>Total Pinjaman Awal: ${formatRp(kasbonData.total_pinjaman)}`;
-                catatLogSistem('HAPUS', `Data Kasbon`, formatLogBlock('KASBON & ANGSURAN DIHAPUS', 'fa-solid fa-trash', '#fee2e2', '#f87171', '#b91c1c', oldHtml));
-            }
+            try {
+                if(kasbonData && !db_kasbon.find(k => k.id == kasbonId)) {
+                    let oldHtml = `Karyawan: ${emp?emp.name:'-'}<br>Total Pinjaman Awal: ${formatUangLog(kasbonData.total_pinjaman)}`;
+                    await catatLogSistem('HAPUS', `Data Kasbon`, formatLogBlock('KASBON & ANGSURAN DIHAPUS', 'fa-solid fa-trash', '#fee2e2', '#f87171', '#b91c1c', oldHtml));
+                }
+            } catch(err) {}
         };
 
 
