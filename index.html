@@ -16,176 +16,226 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     
-        <style>
-        /* SILICON VALLEY UI VARIABLES */
-        :root {
-            --primary: #297c3f; 
-            --accent: #f4e918; 
-            --danger: #ef4444; 
-            --info: #3b82f6;
-            --warning: #f59e0b;
-            --white: #ffffff;
-            --bg-body: #f9fafb; /* Lighter, cleaner background */
-            --text-dark: #111827;
-            --text-muted: #6b7280;
-            --border-color: #e5e7eb;
-            --card-bg: #ffffff;
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05); /* Softer shadow */
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            --hover-bg: #f3f4f6;
-            --radius-md: 12px;
-            --radius-lg: 16px;
+<style>
+    :root {
+        --primary: #297c3f; 
+        --accent: #f4e918; 
+        --danger: #ef4444; 
+        --info: #3b82f6;
+        --warning: #f59e0b;
+        --white: #ffffff;
+        --bg-body: #f8fafc; /* Lebih bersih, gaya modern SaaS */
+        --text-dark: #0f172a;
+        --text-muted: #64748b;
+        --border-color: #e2e8f0;
+        --card-bg: #ffffff;
+        --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        --hover-bg: #f1f5f9;
+        --radius-md: 8px;
+        --radius-lg: 12px;
+    }
+
+    body.dark-mode {
+        --bg-body: #0f172a;
+        --card-bg: #1e293b;
+        --text-dark: #f8fafc;
+        --text-muted: #94a3b8;
+        --border-color: #334155;
+        --hover-bg: #334155;
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+    
+    body { background-color: var(--bg-body); color: var(--text-dark); display: flex; height: 100vh; overflow: hidden; transition: background-color 0.3s, color 0.3s; }
+    #app-wrapper { width: 100%; height: 100%; display: flex; flex-direction: row; }
+
+    /* =========================================
+       1. SIDEBAR & TOPBAR (DESKTOP DEFAULT)
+       ========================================= */
+    .sidebar { width: 260px; height: 100vh; background-color: var(--primary); color: #fff; display: flex; flex-direction: column; flex-shrink: 0; transition: transform 0.3s ease; z-index: 100; }
+    .sidebar-header { padding: 24px; font-size: 20px; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 10px; }
+    .nav-menu { list-style: none; padding: 20px 0; flex: 1; overflow-y: auto; }
+    .nav-item { padding: 14px 24px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: 0.2s; font-weight: 500; font-size: 14px; }
+    .nav-item:hover, .nav-item.active { background-color: rgba(255, 255, 255, 0.15); border-left: 4px solid var(--accent); color: var(--accent); }
+
+    /* Overlay Sidebar Mobile (Disembunyikan di Desktop) */
+    #sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 90; backdrop-filter: blur(2px); opacity: 0; transition: opacity 0.3s; }
+    
+    .hamburger { display: none; font-size: 22px; cursor: pointer; color: var(--text-dark); margin-right: 15px; transition: 0.2s; }
+    .hamburger:hover { color: var(--primary); }
+
+    /* =========================================
+       2. MAIN CONTENT & LAYOUT ENGINE
+       ========================================= */
+    /* Proteksi min-width: 0 mencegah konten Flex meledak keluar layar saat ada tabel panjang */
+    .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; width: 100%; }
+    
+    .topbar { background-color: var(--card-bg); height: 70px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; box-shadow: var(--shadow-sm); z-index: 10; border-bottom: 1px solid var(--border-color); }
+    .page-title { font-size: 20px; font-weight: 600; display: flex; align-items: center; gap: 10px; color: var(--text-dark); }
+    .user-profile { display: flex; align-items: center; gap: 15px; font-weight: 500; font-size: 14px; }
+    .theme-toggle, .logout-btn { cursor: pointer; font-size: 18px; color: var(--text-muted); transition: 0.2s; }
+    .theme-toggle:hover { color: var(--primary); }
+    .logout-btn:hover { color: var(--danger); }
+
+    .content-body { padding: 32px; flex: 1; overflow-y: auto; overflow-x: hidden; scroll-behavior: smooth; }
+    .card { background-color: var(--card-bg); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); padding: 24px; margin-bottom: 24px; border: 1px solid var(--border-color); transition: 0.3s; }
+    .card-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--text-dark); display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; }
+
+    /* Sistem Grid Responsif Bawaan */
+    .grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 24px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-bottom: 24px; }
+    .grid-66-33 { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 24px; }
+
+    /* =========================================
+       3. KOMPONEN UI: BUTTON, FORM, WIDGET
+       ========================================= */
+    .search-wrapper { position: relative; display: flex; align-items: center; flex: 1; min-width: 250px; max-width: 400px; margin-bottom: 15px; margin-right: 10px; }
+    .search-wrapper i.fa-magnifying-glass { position: absolute; left: 14px; color: var(--text-muted); pointer-events: none;}
+    .search-wrapper input { width: 100%; padding-left: 40px !important; padding-right: 36px !important; }
+    .search-wrapper i.fa-xmark { position: absolute; right: 12px; color: var(--text-muted); cursor: pointer; display: none; padding: 4px; transition: 0.2s; }
+    .search-wrapper i.fa-xmark:hover { color: var(--danger); }
+
+    .input-control { padding: 10px 14px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 14px; outline: none; background: var(--card-bg); color: var(--text-dark); transition: 0.2s; width: 100%; box-sizing: border-box; }
+    .input-control:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(41, 124, 63, 0.15); }
+
+    .quick-actions, .filter-bar { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; align-items: center; }
+    .btn { padding: 10px 16px; border-radius: var(--radius-md); font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn-primary { background-color: var(--primary); color: #fff; }
+    .btn-primary:hover { background-color: #1f6331; box-shadow: 0 4px 10px rgba(41, 124, 63, 0.2); transform: translateY(-1px); }
+    .btn-accent { background-color: var(--accent); color: #000; }
+    .btn-accent:hover { filter: brightness(0.95); }
+    .btn-danger { background-color: var(--danger); color: #fff; }
+    .btn-warning { background-color: var(--warning); color: #fff; }
+    .btn-info { background-color: var(--info); color: #fff; }
+    .btn-outline { background: transparent; border: 1px solid var(--border-color); color: var(--text-dark); }
+    .btn-outline:hover { background: var(--hover-bg); border-color: var(--primary); color: var(--primary); }
+
+    .stat-card { background-color: var(--card-bg); padding: 20px; border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); display: flex; align-items: center; gap: 16px; border: 1px solid var(--border-color); position: relative; overflow: hidden; transition: 0.2s; }
+    .stat-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+    .stat-card::before { content: ""; position: absolute; left: 0; top: 0; height: 100%; width: 4px; background: var(--primary); }
+    .stat-card.danger::before { background: var(--danger); }
+    .stat-card.warning::before { background: var(--warning); }
+    .stat-card.info::before { background: var(--info); }
+    .stat-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+    .stat-info h4 { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+    .stat-info p { font-size: 22px; font-weight: 700; margin-top: 4px; color: var(--text-dark); }
+
+    /* =========================================
+       4. TABEL & BADGE (ANTI-OVERFLOW)
+       ========================================= */
+    .table-container { overflow-x: auto; width: 100%; border-radius: var(--radius-md); -webkit-overflow-scrolling: touch; }
+    table { width: 100%; border-collapse: collapse; text-align: left; min-width: 600px; /* Jaga agar tabel tidak menyusut rusak */ }
+    th { background-color: var(--hover-bg); color: var(--text-muted); font-size: 12px; text-transform: uppercase; padding: 12px 16px; border-bottom: 1px solid var(--border-color); font-weight: 600; white-space: nowrap; }
+    td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); font-size: 13px; color: var(--text-dark); white-space: nowrap; }
+    tr:hover td { background-color: var(--hover-bg); }
+    .clickable-name { color: var(--info); font-weight: 600; cursor: pointer; }
+
+    .badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .badge-active { background-color: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2); }
+    .badge-inactive { background-color: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); }
+    .badge-warning { background-color: rgba(245, 158, 11, 0.1); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.2); }
+    .badge-info { background-color: rgba(59, 130, 246, 0.1); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.2); }
+
+    .summary-box { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 20px; background: var(--hover-bg); padding: 16px; border-radius: var(--radius-md); border-left: 4px solid var(--primary); color: var(--text-dark); }
+
+    /* =========================================
+       5. MODAL / POPUP
+       ========================================= */
+    .modal { display: none; position: fixed; inset: 0; background-color: rgba(15, 23, 42, 0.7); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(3px); padding: 20px; }
+    /* Desktop Modal Width akan mengikuti atribut style="" di HTML secara dinamis */
+    .modal-content { background: var(--card-bg); padding: 32px; border-radius: var(--radius-lg); max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-lg); color: var(--text-dark); position: relative; animation: modalFade 0.2s ease-out; }
+    @keyframes modalFade { from { opacity: 0; transform: translateY(20px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    
+    .modal-header { font-size: 18px; font-weight: 600; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; }
+    .form-group { margin-bottom: 16px; text-align: left; width: 100%; }
+    .form-group label { display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted); font-weight: 500; }
+
+    /* =========================================
+       6. LOGS & CALENDAR
+       ========================================= */
+    .widget-list { list-style: none; }
+    .widget-list li { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px dashed var(--border-color); font-size: 13px; }
+    .widget-list li:last-child { border-bottom: none; }
+    .activity-feed { position: relative; padding-left: 20px; }
+    .activity-feed::before { content: ''; position: absolute; left: 6px; top: 0; bottom: 0; width: 2px; background: var(--border-color); }
+    .activity-item { position: relative; padding-bottom: 16px; font-size: 13px; color: var(--text-dark); }
+    .activity-item::before { content: ''; position: absolute; left: -19px; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--bullet-color, var(--primary)); border: 2px solid var(--card-bg); }
+    .activity-time { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; display: block; }
+    
+    .calendar-wrapper { border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; width: 100%; }
+    .calendar-header-days { display: grid; grid-template-columns: repeat(7, 1fr); background: var(--hover-bg); text-align: center; font-weight: 600; font-size: 13px; padding: 12px 0; border-bottom: 1px solid var(--border-color); color: var(--text-dark); }
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); auto-rows: minmax(90px, auto); }
+    .calendar-day { border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); padding: 10px; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; justify-content: space-between; background: var(--card-bg); color: var(--text-dark); }
+    .calendar-day:nth-child(7n) { border-right: none; }
+    .calendar-date-num { font-weight: 600; font-size: 15px; margin-bottom: 8px; }
+    
+    .day-weekday { background: rgba(16, 185, 129, 0.03) !important; border-left: 3px solid #10b981; }
+    .day-weekend { background: rgba(239, 68, 68, 0.03) !important; border-left: 3px solid #ef4444; }
+    .day-libur { background: rgba(245, 158, 11, 0.03) !important; border-left: 3px solid #f59e0b; }
+    .empty-day { background: var(--bg-body); cursor: default; }
+
+    .hidden { display: none !important; }
+    .text-center { text-align: center; }
+    canvas { max-height: 300px; width: 100%; }
+
+    /* =========================================
+       LOGIN SCREEN
+       ========================================= */
+    #login-screen { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background-color: var(--bg-body); position: absolute; top:0; left:0; right:0; bottom:0; z-index: 2000; }
+    .login-card { background: var(--card-bg); padding: 40px; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); width: 380px; max-width: 90%; text-align: center; border: 1px solid var(--border-color); }
+    .login-card h2 { margin-bottom: 8px; color: var(--text-dark); font-size: 24px; }
+    .login-card p { color: var(--text-muted); font-size: 14px; margin-bottom: 32px; }
+    #login-error { color: var(--danger); font-size: 13px; margin-top: -10px; margin-bottom: 15px; display: none; text-align: left; font-weight: 500; }
+
+    /* =========================================
+       📱 MOBILE RESPONSIVE QUERIES (MAX 768px)
+       ========================================= */
+    @media screen and (max-width: 768px) {
+        
+        /* 1. Sidebar Off-Canvas Layout */
+        .sidebar { position: fixed; top: 0; left: -260px; height: 100vh; box-shadow: 4px 0 24px rgba(0,0,0,0.15); }
+        .sidebar.open { transform: translateX(260px); } /* Menggeser ke dalam layar */
+        #sidebar-overlay.show { display: block; opacity: 1; }
+        .hamburger { display: block; }
+        
+        /* 2. Topbar & Main Body Padding */
+        .topbar { padding: 0 16px; height: 65px; }
+        .page-title { font-size: 16px; }
+        #topbar-user-name { display: none; /* Sembunyikan text nama profil agar lega */ }
+        .content-body { padding: 16px; }
+        .card { padding: 16px; margin-bottom: 16px; }
+
+        /* 3. Grid Breakdown ke 1 Kolom */
+        .grid-cards { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; } /* Khusus widget atas dashboard: 2 kolom kecil */
+        .grid-2, .grid-3, .grid-66-33 { grid-template-columns: 1fr; gap: 16px; }
+
+        /* 4. Filter, Form & Button Fixes */
+        .quick-actions, .filter-bar { flex-direction: column; align-items: stretch; gap: 10px; }
+        .quick-actions .btn { width: 100%; }
+        .search-wrapper { max-width: 100%; margin-right: 0; margin-bottom: 10px; }
+        .filter-bar input, .filter-bar select, .filter-bar .btn { width: 100%; margin-left: 0 !important; }
+        
+        /* Modifikasi Flex Inline pada form modal agar turun ke bawah */
+        div[style*="display: flex; gap: 16px;"] { flex-direction: column; gap: 12px !important; }
+
+        /* 5. Modal Override untuk Layar HP */
+        .modal { padding: 10px; }
+        .modal-content { 
+            width: 100% !important; /* Paksa timpa style inline dari HTML */
+            max-width: 100% !important; 
+            padding: 20px; 
+            margin: auto;
         }
-    
-        body.dark-mode {
-            --bg-body: #0f172a;
-            --card-bg: #1e293b;
-            --text-dark: #f8fafc;
-            --text-muted: #94a3b8;
-            --border-color: #334155;
-            --hover-bg: #334155;
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-        }
-    
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
-        body { background-color: var(--bg-body); color: var(--text-dark); display: flex; height: 100vh; overflow: hidden; transition: 0.3s ease; }
-        #app-wrapper { width: 100%; height: 100%; display: flex; }
-    
-        /* UTILITIES & INPUTS */
-        .search-wrapper { position: relative; display: flex; align-items: center; flex: 1; min-width: 200px; margin-bottom: 15px; margin-right: 10px; }
-        .search-wrapper i.fa-magnifying-glass { position: absolute; left: 14px; color: var(--text-muted); }
-        .search-wrapper input { width: 100%; padding-left: 40px !important; padding-right: 36px !important; }
-        .search-wrapper i.fa-xmark { position: absolute; right: 12px; color: var(--text-muted); cursor: pointer; display: none; }
-        
-        .input-control { padding: 10px 16px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 14px; outline: none; background: var(--card-bg); color: var(--text-dark); transition: all 0.2s; }
-        .input-control:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(41, 124, 63, 0.15); }
-    
-        /* SIDEBAR (Responsive Desktop & Mobile) */
-        .sidebar { width: 260px; background-color: var(--primary); color: #fff; display: flex; flex-direction: column; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 50; }
-        .sidebar-header { padding: 24px; font-size: 20px; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 10px; }
-        .nav-menu { list-style: none; padding: 20px 0; flex: 1; overflow-y: auto; }
-        .nav-item { padding: 14px 24px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: 0.2s; font-weight: 500; font-size: 15px; }
-        .nav-item:hover, .nav-item.active { background-color: rgba(255, 255, 255, 0.15); border-left: 4px solid var(--accent); color: var(--accent); }
-    
-        /* OVERLAY MOBILE */
-        #sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 40; backdrop-filter: blur(2px); opacity: 0; transition: opacity 0.3s; }
-    
-        /* MAIN CONTENT */
-        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; width: 100%; }
-        .topbar { background-color: var(--card-bg); height: 70px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; box-shadow: var(--shadow-sm); z-index: 10; border-bottom: 1px solid var(--border-color); }
-        .hamburger { display: none; font-size: 22px; cursor: pointer; color: var(--text-dark); margin-right: 15px; }
-        .page-title { font-size: 20px; font-weight: 600; display: flex; align-items: center; gap: 10px; color: var(--text-dark); }
-        .user-profile { display: flex; align-items: center; gap: 15px; font-weight: 500; }
-        
-        .content-body { padding: 32px; flex: 1; overflow-y: auto; overflow-x: hidden; }
-        .card { background-color: var(--card-bg); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); padding: 24px; margin-bottom: 24px; border: 1px solid var(--border-color); }
-        .card-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--text-dark); display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px;}
-    
-        /* GRIDS (Modern layout) */
-        .grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 24px; }
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
-        .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-bottom: 24px; }
-        .grid-66-33 { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 24px; }
-    
-        /* STAT CARDS */
-        .stat-card { background-color: var(--card-bg); padding: 20px; border-radius: var(--radius-lg); box-shadow: var(--shadow-md); display: flex; align-items: center; gap: 16px; border: 1px solid var(--border-color); position: relative; overflow: hidden; transition: transform 0.2s; }
-        .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
-        .stat-card::before { content: ""; position: absolute; left: 0; top: 0; height: 100%; width: 5px; background: var(--primary); }
-        .stat-card.danger::before { background: var(--danger); }
-        .stat-card.warning::before { background: var(--warning); }
-        .stat-card.info::before { background: var(--info); }
-        .stat-icon { width: 50px; height: 50px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-        .stat-info h4 { font-size: 13px; color: var(--text-muted); font-weight: 500; }
-        .stat-info p { font-size: 22px; font-weight: 700; margin-top: 4px; color: var(--text-dark); }
-    
-        /* BUTTONS */
-        .quick-actions, .filter-bar { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; align-items: center; }
-        .btn { padding: 10px 18px; border-radius: var(--radius-md); font-size: 14px; font-weight: 500; cursor: pointer; border: none; transition: 0.2s; display: inline-flex; align-items: center; gap: 8px; justify-content: center; }
-        .btn-primary { background-color: var(--primary); color: #fff; }
-        .btn-primary:hover { background-color: #1f6331; box-shadow: 0 4px 12px rgba(41, 124, 63, 0.2); }
-        .btn-accent { background-color: var(--accent); color: #000; }
-        .btn-danger { background-color: var(--danger); color: #fff; }
-        .btn-warning { background-color: var(--warning); color: #fff; }
-        .btn-info { background-color: var(--info); color: #fff; }
-        .btn-outline { background: transparent; border: 1px solid var(--border-color); color: var(--text-dark); }
-        .btn-outline:hover { background: var(--hover-bg); border-color: var(--primary); color: var(--primary); }
-    
-        /* TABLES (SaaS Style) */
-        .table-container { overflow-x: auto; width: 100%; -webkit-overflow-scrolling: touch; border-radius: 8px; border: 1px solid var(--border-color); }
-        table { width: 100%; border-collapse: collapse; text-align: left; }
-        th { background-color: var(--hover-bg); color: var(--text-muted); font-size: 12px; text-transform: uppercase; padding: 14px 16px; border-bottom: 1px solid var(--border-color); font-weight: 600; white-space: nowrap; }
-        td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); font-size: 14px; color: var(--text-dark); white-space: nowrap; }
-        tr:hover td { background-color: var(--hover-bg); }
-        .clickable-name { color: var(--info); font-weight: 600; cursor: pointer; }
-    
-        /* BADGES */
-        .badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; display: inline-block; }
-        .badge-active { background-color: rgba(16, 185, 129, 0.1); color: #10b981; }
-        .badge-inactive { background-color: rgba(239, 68, 68, 0.1); color: #ef4444; }
-        .badge-warning { background-color: rgba(245, 158, 11, 0.1); color: #f59e0b; }
-        .badge-info { background-color: rgba(59, 130, 246, 0.1); color: #3b82f6; }
-    
-        /* MODAL (Responsive Overrides) */
-        .modal { display: none; position: fixed; inset: 0; background-color: rgba(17, 24, 39, 0.6); z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(4px); padding: 20px; }
-        /* Force overriding inline styles for mobile friendliness */
-        .modal-content { background: var(--card-bg); padding: 32px; border-radius: var(--radius-lg); width: 100% !important; max-width: 500px; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); position: relative; animation: modalFadeIn 0.3s ease; }
-        .modal-content[style*="width: 700px"], .modal-content[style*="width: 600px"] { max-width: 700px; }
-        .modal-content[style*="width: 1100px"] { max-width: 1100px; }
-        @keyframes modalFadeIn { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
-        
-        .modal-header { font-size: 18px; font-weight: 600; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; }
-        .form-group { margin-bottom: 16px; text-align: left; width: 100%; }
-        .form-group label { display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted); font-weight: 500; }
-        
-        .flex-row { display: flex; gap: 16px; width: 100%; }
-        
-        /* MISC */
-        .hidden { display: none !important; }
-        .text-center { text-align: center; }
-        .summary-box { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 20px; background: var(--hover-bg); padding: 16px 20px; border-radius: var(--radius-md); border-left: 4px solid var(--primary); color: var(--text-dark); }
-        canvas { max-height: 300px; width: 100%; }
-    
-        /* ================= MOBILE RESPONSIVE MEDIA QUERIES ================= */
-        @media (max-width: 768px) {
-            /* Sidebar jadi Off-Canvas */
-            .sidebar { position: fixed; top: 0; left: 0; bottom: 0; transform: translateX(-100%); width: 280px; box-shadow: 4px 0 24px rgba(0,0,0,0.15); }
-            .sidebar.open { transform: translateX(0); }
-            #sidebar-overlay.show { display: block; opacity: 1; }
-            
-            /* Topbar & Content Padding */
-            .topbar { padding: 0 16px; height: 60px; }
-            .hamburger { display: block; }
-            .page-title { font-size: 16px; }
-            #topbar-user-name { display: none; /* Sembunyikan nama user di mobile agar lega */ }
-            .content-body { padding: 16px; }
-            
-            /* Cards & Grids Reset to 1 Column */
-            .card { padding: 16px; margin-bottom: 16px; }
-            .grid-cards { grid-template-columns: repeat(2, 1fr); gap: 12px; } /* 2 kolom untuk stat card di mobile */
-            .grid-2, .grid-3, .grid-66-33 { grid-template-columns: 1fr; gap: 16px; }
-            
-            /* Buttons, Forms, & Filters */
-            .quick-actions, .filter-bar { flex-direction: column; width: 100%; gap: 10px; align-items: stretch;}
-            .btn { width: 100%; justify-content: center; }
-            .search-wrapper, select.input-control, input.input-control { width: 100%; max-width: 100%; margin-right:0; margin-bottom: 0;}
-            .flex-row, div[style*="display: flex; gap: 16px;"] { flex-direction: column; gap: 0; }
-            
-            /* Modals */
-            .modal { padding: 10px; }
-            .modal-content { padding: 20px; }
-        }
-        
-        @media (max-width: 480px) {
-            .grid-cards { grid-template-columns: 1fr; } /* 1 Kolom untuk layar sangat kecil */
-            .stat-info p { font-size: 20px; }
-        }
-        /* Sisanya biarkan default sistem (Login, dll) */
-        #login-screen { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background-color: var(--bg-body); position: absolute; top:0; left:0; right:0; bottom:0; z-index: 1000; }
-        .login-card { background: var(--card-bg); padding: 40px; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); width: 380px; max-width: 90%; text-align: center; border: 1px solid var(--border-color); }
-        .calendar-wrapper { border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; width: 100%; overflow-x: auto;}
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(40px, 1fr)); auto-rows: minmax(80px, auto); }
-    </style>
+
+        /* 6. Kalender HP */
+        .calendar-wrapper { overflow-x: auto; }
+        .calendar-header-days, .calendar-grid { min-width: 500px; /* Kalender digeser ke samping bukan dikompres */ }
+    }
+</style>
 </head>
 <body>
 
@@ -204,9 +254,10 @@
     </div>
 
     <!-- WRAPPER: APLIKASI UTAMA -->
+<!-- WRAPPER: APLIKASI UTAMA -->
     <div id="app-wrapper" class="hidden">
         
-        <!-- Tambahkan Overlay Hitam untuk Mobile -->
+        <!-- Overlay Gelap untuk HP -->
         <div id="sidebar-overlay" onclick="toggleSidebar()"></div>
 
         <!-- SIDEBAR -->
@@ -224,10 +275,10 @@
         </nav>
 
         <main class="main-content">
-           <div class="topbar">
-                <div style="display: flex; align-items: center;">
+            <div class="topbar">
+                <div class="page-title">
                     <i class="fa-solid fa-bars hamburger" onclick="toggleSidebar()"></i>
-                    <div class="page-title" id="topbar-title">Dashboard <span id="loading-indicator"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</span></div>
+                    <span id="topbar-title">Dashboard <span id="loading-indicator"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</span></span>
                 </div>
                 <div class="user-profile">
                     <i class="fa-solid fa-moon theme-toggle" id="theme-toggle-btn" onclick="toggleTheme()" title="Ubah Tema"></i>
@@ -3286,6 +3337,26 @@
             let win = window.open('', '_blank'); win.document.write(html); win.document.close();
         };
 
+
+        // ================== LOGIKA RESPONSIVE MOBILE ==================
+        window.toggleSidebar = function() {
+            const sidebar = document.getElementById('main-sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('show');
+        };
+
+        // Memodifikasi fungsi bawaan switchPage agar menutup menu saat di-klik (di HP)
+        const baseSwitchPage = window.switchPage;
+        window.switchPage = function(pageId, element) {
+            baseSwitchPage(pageId, element);
+            
+            // Logika tutup otomatis khusus untuk layar HP
+            if (window.innerWidth <= 768) {
+                document.getElementById('main-sidebar').classList.remove('open');
+                document.getElementById('sidebar-overlay').classList.remove('show');
+            }
+        };
         
     </script>
 </body>
