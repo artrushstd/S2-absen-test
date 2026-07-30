@@ -646,15 +646,14 @@
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                             <h3 class="card-title" style="margin-bottom: 0;">Laporan Performa Karyawan</h3>
                         </div>
-                        <div class="search-wrapper">
-                            <i class="fa-solid fa-magnifying-glass"></i>
-                            <input type="text" id="search-performa" class="input-control" placeholder="Cari nama karyawan..." oninput="handleSearchInput('performa')">
-                            <i class="fa-solid fa-xmark" id="clear-performa" onclick="clearSearch('performa')"></i>
-                        </div>
-                       <div class="filter-bar">
+                        <div class="filter-bar">
+                            <div class="search-wrapper" style="margin-bottom: 0; max-width: 300px;">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" id="search-performa" class="input-control" placeholder="Cari nama karyawan..." oninput="handleSearchInput('performa')">
+                                <i class="fa-solid fa-xmark" id="clear-performa" onclick="clearSearch('performa')"></i>
+                            </div>
                             <input type="text" id="date-range-performa" class="input-control" placeholder="Pilih Range Tanggal...">
                             <button class="btn btn-primary" onclick="filterPerforma()"><i class="fa-solid fa-filter"></i> Filter</button>
-                            <!-- Tombol Print Baru -->
                             <button class="btn btn-accent" style="margin-left: auto;" onclick="printPerforma()"><i class="fa-solid fa-print"></i> Print Data</button>
                         </div>
                         <!-- Penambahan Maks Poin Pokok di paling kiri -->
@@ -3419,16 +3418,27 @@
                 .header { text-align: center; margin-bottom: 15px; border-bottom: 2px solid #000; padding-bottom: 10px; } 
                 .header h2 { margin: 0; font-size: 18px; text-transform: uppercase; } 
                 .header p { margin: 4px 0 0 0; font-size: 12px; } 
-                table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; } 
+                .summary-box { display: flex; justify-content: center; gap: 15px; margin-top: 12px; font-size: 12px; background: #f8fafc; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px; }
+                table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 11px; } 
                 th, td { border: 1px solid #000; padding: 6px 8px; vertical-align: middle; } 
                 th { background-color: #f0f0f0; font-weight: bold; text-align: center; } 
                 .text-center { text-align: center; } 
             </style></head><body onload="window.print();">
+            
             <div class="header">
                 <h2>Laporan Performa Karyawan</h2>
                 <p>Periode: <strong>${dateRangePerforma.start}</strong> s/d <strong>${dateRangePerforma.end}</strong></p>
-                <p>Maks Hari Berangkat: <strong>${document.getElementById('perf-max-hari').innerText}</strong></p>
+                
+                <!-- Menambahkan semua ringkasan ke dalam cetakan kertas -->
+                <div class="summary-box">
+                    <span>Maks Hari: <strong>${document.getElementById('perf-max-hari') ? document.getElementById('perf-max-hari').innerText : '-'}</strong></span> | 
+                    <span>Total Kehadiran: <strong>${document.getElementById('perf-tot-berangkat') ? document.getElementById('perf-tot-berangkat').innerText : '-'}</strong></span> | 
+                    <span>Izin/Sakit: <strong>${document.getElementById('perf-tot-izinsakit') ? document.getElementById('perf-tot-izinsakit').innerText : '-'}</strong></span> | 
+                    <span>Alfa: <strong>${document.getElementById('perf-tot-alfa') ? document.getElementById('perf-tot-alfa').innerText : '-'}</strong></span> | 
+                    <span>Rata-rata Poin: <strong>${document.getElementById('perf-avg-poin') ? document.getElementById('perf-avg-poin').innerText : '-'}</strong></span>
+                </div>
             </div>
+
             <table><thead><tr>
                 <th style="width: 25%;">Nama Karyawan</th>
                 <th>Berangkat</th>
