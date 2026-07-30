@@ -3410,8 +3410,12 @@
             } catch(err) {}
         };
 
-        // ================== FITUR PRINT PERFORMA ==================
+       // ================== FITUR PRINT PERFORMA ==================
         window.printPerforma = function() {
+            // PERBAIKAN: Ambil tanggal langsung dari input HTML untuk menghindari error ReferenceError
+            let rawPeriod = document.getElementById('date-range-performa').value;
+            let periodText = rawPeriod ? rawPeriod.replace(' to ', ' s/d ') : 'Semua Waktu';
+
             let html = `<html><head><title>Print Laporan Performa</title><style>
                 @page { size: A4 landscape; margin: 10mm; } 
                 body { font-family: "Arial", sans-serif; font-size: 11px; color: #000; margin: 0; } 
@@ -3427,7 +3431,7 @@
             
             <div class="header">
                 <h2>Laporan Performa Karyawan</h2>
-                <p>Periode: <strong>${dateRangePerforma.start}</strong> s/d <strong>${dateRangePerforma.end}</strong></p>
+                <p>Periode: <strong>${periodText}</strong></p>
                 
                 <!-- Menambahkan semua ringkasan ke dalam cetakan kertas -->
                 <div class="summary-box">
