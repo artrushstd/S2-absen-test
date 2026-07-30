@@ -1915,7 +1915,19 @@
                     let emp = db_karyawan.find(k => k.id == ab.emp_id); 
                     let tHari = ab.tipe_hari || (ab.is_weekend ? 'Weekend' : 'Weekday'); let p = hitungPoinAkhir(ab); 
                     let badge = p.lateness > 0 ? '<span class="badge badge-inactive">Telat</span>' : '<span class="badge badge-active">Tepat Waktu</span>'; 
-                    if(!ab.clock_out) badge = '<span class="badge badge-danger">Tidak Absen Pulang (Tidak Valid)</span>'; 
+                    
+                    // --- LOGIKA BARU SEDANG BEKERJA ---
+                    if(!ab.clock_out) {
+                        // Jika tanggal absen sama dengan hari ini, maka statusnya Sedang Bekerja
+                        if (ab.date === todayStr) {
+                            badge = '<span class="badge badge-info" style="background:#e0f2fe; color:#0284c7; border:1px solid #38bdf8;"><i class="fa-solid fa-person-digging"></i> Sedang Bekerja</span>';
+                        } else {
+                            // Jika sudah beda hari (kemarin dsb) dan tidak ada jam keluar, maka tidak valid
+                            badge = '<span class="badge badge-danger">Tidak Absen Pulang (Tidak Valid)</span>'; 
+                        }
+                    }
+                    // -----------------------------------
+
                     tbodyT.innerHTML += '<tr><td>' + (emp ? emp.name : ab.emp_id) + '</td><td>' + p.shiftName + '</td><td>' + (ab.clock_in || '-') + '</td><td>' + (ab.clock_out || '-') + '</td><td>' + badge + '</td><td>' + formatHours(p.lemburTotal) + '</td></tr>'; 
                 }); 
             }
