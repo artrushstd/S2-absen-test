@@ -3054,6 +3054,13 @@
                 }
 
                 let tipe = getTipeHariByDate(checkDate);
+                
+                // --- LOGIKA BARU: CEGAH ALFA OTOMATIS DI HARI LIBUR ---
+                // Jika tanggal ini diatur sebagai Hari Libur di kalender, robot dilewati (tidak memberi Alfa)
+                if (tipe === 'Libur' || tipe === 'Hari Libur') {
+                    continue; 
+                }
+
                 let is_weekend = (tipe === 'Weekend' || tipe === 'Libur');
 
                 activeEmps.forEach(emp => {
