@@ -3343,14 +3343,16 @@
         // --- LOG SP ---
         const originalAssignSP = window.assignSP;
         window.assignSP = async function(level) {
-            let empId = currentSPEmpId;
-            let emp = db_karyawan.find(e => e.id === empId);
-            let oldLevel = getSPLokal(emp); // Sudah berupa teks primitif
+            // PERBAIKAN: Ambil nama langsung dari HTML Pop-up
+            let empName = document.getElementById('sp-emp-name').innerText;
+            let emp = db_karyawan.find(e => e.name === empName);
+            let empId = emp ? emp.id : null;
+            let oldLevel = emp ? getSPLokal(emp) : 'NONE';
             
             await originalAssignSP(level);
             try {
                 let empAfter = db_karyawan.find(e => e.id === empId);
-                if(oldLevel !== level && (empAfter.sp_level === level || (level === 'NONE' && empAfter.sp_level === 'NONE'))) {
+                if(empAfter && oldLevel !== level && (empAfter.sp_level === level || (level === 'NONE' && empAfter.sp_level === 'NONE'))) {
                     let desc = `Memperbarui tingkatan Surat Peringatan (SP) untuk <strong>${emp.name}</strong>.`;
                     let oH = `Status SP: <strong>${oldLevel}</strong>`;
                     let nH = `Status SP: <strong style="color:var(--danger);">${level}</strong>`;
@@ -3362,11 +3364,17 @@
         // --- LOG PAYROLL BONUS ---
         const originalSaveBonus = window.saveBonus;
         window.saveBonus = async function() {
-            let empId = currentEditEmpId;
+            // PERBAIKAN: Ambil referensi karyawan & tanggal langsung dari elemen HTML
             let name = document.getElementById('modal-emp-name').value;
-            let bonusKey = empId + "_" + dateRangePayroll.start; 
+            let emp = db_karyawan.find(e => e.name === name);
+            let empId = emp ? emp.id : null;
+            
+            let rawPeriod = document.getElementById('date-range-payroll').value || "";
+            let startPeriod = rawPeriod.split("to")[0].trim();
+            let bonusKey = empId + "_" + startPeriod; 
+            
             let rawB = db_bonus[bonusKey] || {}; 
-            let b = JSON.parse(JSON.stringify(rawB)); // Deep clone 
+            let b = JSON.parse(JSON.stringify(rawB)); 
             
             let oldGPokok = b.gaji_pokok_override !== null && b.gaji_pokok_override !== undefined ? formatUangLog(b.gaji_pokok_override) : 'Auto Sistem';
             let oldPBonus = b.poin || 0;
@@ -3413,14 +3421,17 @@
         const originalSaveAngsuran = window.saveAngsuran;
         window.saveAngsuran = async function() {
             let nom = document.getElementById('input-nominal-angsuran').value;
-            let kasbonData = db_kasbon.find(k => k.id == currentKasbonId);
-            let emp = kasbonData ? db_karyawan.find(e => e.id == kasbonData.emp_id) : null;
+            
+            // PERBAIKAN: Tarik nama dari Judul Pop-up (Detail Kasbon - Nama) agar sistem log jalan lancar
+            let titleText = document.getElementById('kasbon-detail-title').innerText || "";
+            let empName = titleText.replace('Detail Kasbon - ', '').trim();
+            
             let beforeCount = db_angsuran.length;
             
             await originalSaveAngsuran();
             try {
                 if(db_angsuran.length > beforeCount && nom) {
-                    let desc = `Menerima dana pembayaran angsuran kasbon/cicilan dari karyawan bernama <strong>${emp?emp.name:'-'}</strong>.`;
+                    let desc = `Menerima dana pembayaran angsuran kasbon/cicilan dari karyawan bernama <strong>${empName || '-'}</strong>.`;
                     let newHtml = `Nominal Pembayaran Diterima: <strong style="color:var(--primary);">${formatUangLog(nom)}</strong>`;
                     await catatLogSistem('BAYAR', `Angsuran Kasbon`, createSingleHTML(desc, 'PEMBAYARAN DITERIMA', 'fa-solid fa-money-bill-wave', '#d1fae5', '#34d399', '#047857', newHtml));
                 }
