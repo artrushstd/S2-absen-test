@@ -3265,17 +3265,31 @@
             let rawAb = db_absensi.find(a => a.emp_id == empId && a.date === date);
             let oldAb = rawAb ? JSON.parse(JSON.stringify(rawAb)) : null;
             
-            let oldP = oldAb && oldAb.poin_pokok_override !== null ? oldAb.poin_pokok_override : 'Otomatis Kalkulator';
-            let oldE = oldAb && oldAb.poin_ekstra_override !== null ? oldAb.poin_ekstra_override : 'Otomatis Kalkulator';
+            // PERBAIKAN: Hitung angka poin otomatis sistem sebagai nilai dasar
+            let pCalc = { pokok: 0, ekstra: 0 };
+            if (oldAb) {
+                let tHari = oldAb.tipe_hari || (oldAb.is_weekend ? 'Weekend' : 'Weekday');
+                pCalc = hitungPoinUtuh(oldAb.clock_in, oldAb.clock_out, tHari);
+            }
             
-            let newP = document.getElementById('edit-absensi-pokok').value || 'Otomatis Kalkulator';
-            let newE = document.getElementById('edit-absensi-ekstra').value || 'Otomatis Kalkulator';
+            // Jika nilai override tidak null (ada isinya), tampilkan angka tersebut + teks (Manual).
+            // Jika null, tampilkan angka dari pCalc + teks (Auto).
+            let oldP = (oldAb && oldAb.poin_pokok_override !== null && oldAb.poin_pokok_override !== undefined) 
+                        ? `${oldAb.poin_pokok_override} (Manual)` : `${pCalc.pokok} (Auto)`;
+            let oldE = (oldAb && oldAb.poin_ekstra_override !== null && oldAb.poin_ekstra_override !== undefined) 
+                        ? `${oldAb.poin_ekstra_override} (Manual)` : `${pCalc.ekstra} (Auto)`;
+            
+            let inP = document.getElementById('edit-absensi-pokok').value;
+            let inE = document.getElementById('edit-absensi-ekstra').value;
+            
+            let newP = inP !== '' ? `${inP} (Manual)` : `${pCalc.pokok} (Auto)`;
+            let newE = inE !== '' ? `${inE} (Manual)` : `${pCalc.ekstra} (Auto)`;
             
             await originalSaveEditAbsensi();
             try {
                 let changed = []; let oH = ''; let nH = '';
-                if (String(oldP) !== String(newP)) { changed.push('Poin Pokok'); oH += `Poin Pokok: ${oldP}<br>`; nH += `Poin Pokok: ${newP}<br>`; }
-                if (String(oldE) !== String(newE)) { changed.push('Poin Ekstra'); oH += `Poin Ekstra: ${oldE}<br>`; nH += `Poin Ekstra: ${newE}<br>`; }
+                if (oldP !== newP) { changed.push('Poin Pokok'); oH += `Poin Pokok: <strong>${oldP}</strong><br>`; nH += `Poin Pokok: <strong>${newP}</strong><br>`; }
+                if (oldE !== newE) { changed.push('Poin Ekstra'); oH += `Poin Ekstra: <strong>${oldE}</strong><br>`; nH += `Poin Ekstra: <strong>${newE}</strong><br>`; }
                 
                 if (changed.length > 0) {
                     let desc = `Melakukan override/edit manual nilai poin absensi milik <strong>${name}</strong> tgl <strong>${date}</strong> (Perubahan pada: <span style="color:var(--primary); font-weight:700;">${changed.join(', ')}</span>).`;
