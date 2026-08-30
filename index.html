@@ -2579,7 +2579,7 @@
 
             if (processedList.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="8" class="text-center">${q ? 'Data tidak ditemukan' : 'Tidak ada pengeluaran pada rentang tanggal ini'}</td></tr>`;
-                document.getElementById('uk-tot-nominal').innerText = "Rp 0";
+                document.getElementById('uk-tot-nominal').innerText = formatRp(0);
                 return;
             }
 
@@ -2603,14 +2603,14 @@
                     <td><strong>${item.emp_name}</strong></td>
                     <td style="color:var(--info); font-weight:600;">${item.penerima}</td>
                     <td>${item.keterangan}</td>
-                    <td>Rp ${formatRp(item.nominal)}</td>
+                    <td>${formatRp(item.nominal)}</td>
                     <td>${badgeStatus}</td>
                     <td style="white-space:nowrap;">${actionBtns}</td>
                 </tr>`;
             });
             
             tbody.innerHTML = htmlTemp;
-            document.getElementById('uk-tot-nominal').innerText = 'Rp ' + formatRp(sumNominal);
+            document.getElementById('uk-tot-nominal').innerText = formatRp(sumNominal);
         };
 
         window.openUangKeluarModal = function(editId = null) {
@@ -2690,9 +2690,9 @@
                     let idx = db_uang_keluar.findIndex(u => u.id == editId);
                     if(idx > -1 && data.length) db_uang_keluar[idx] = data[0];
                     
-                    // Catat Log
-                    let oH = `Keterangan: ${oldData.keterangan}<br>Nominal: Rp ${formatRp(oldData.nominal)}`;
-                    let nH = `Keterangan: ${keterangan}<br>Nominal: Rp ${formatRp(nominal)}`;
+                    // Catat Log (Sudah diperbaiki Rp-nya)
+                    let oH = `Keterangan: ${oldData.keterangan}<br>Nominal: ${formatRp(oldData.nominal)}`;
+                    let nH = `Keterangan: ${keterangan}<br>Nominal: ${formatRp(nominal)}`;
                     await catatLogSistem('EDIT', `Data Pengeluaran`, createBeforeAfterHTML(`Mengubah record pengeluaran ke ${penerima}`, oH, nH));
                     
                     alert("Pengeluaran berhasil diperbarui.");
@@ -2702,8 +2702,8 @@
                     
                     if(data.length) db_uang_keluar.unshift(data[0]);
                     
-                    // Catat Log
-                    let nH = `Penerima: ${penerima}<br>Keterangan: ${keterangan}<br>Nominal: Rp ${formatRp(nominal)}`;
+                    // Catat Log (Sudah diperbaiki Rp-nya)
+                    let nH = `Penerima: ${penerima}<br>Keterangan: ${keterangan}<br>Nominal: ${formatRp(nominal)}`;
                     await catatLogSistem('TAMBAH', `Pengeluaran Baru`, createSingleHTML(`Pencatatan pengeluaran uang baru`, 'UANG KELUAR', 'fa-solid fa-money-bill-transfer', '#d1fae5', '#34d399', '#047857', nH));
                     
                     alert("Pengeluaran berhasil ditambahkan.");
@@ -2711,7 +2711,7 @@
                 closeUangKeluarModal();
                 refreshHalamanAktif();
             } catch(error) {
-                alert("Gagal menyimpan data pengeluaran (Pastikan tabel 'uang_keluar' sudah ada di Supabase). Pesan: " + error.message);
+                alert("Gagal menyimpan data pengeluaran. Pesan: " + error.message);
             }
             btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-save"></i> Simpan Data';
         };
@@ -2726,7 +2726,8 @@
                 
                 db_uang_keluar = db_uang_keluar.filter(u => u.id != id);
                 
-                let oH = `Vendor: ${oldData.penerima}<br>Keterangan: ${oldData.keterangan}<br>Nominal: Rp ${formatRp(oldData.nominal)}`;
+                // Logika Log (Diperbaiki Rp-nya)
+                let oH = `Vendor: ${oldData.penerima}<br>Keterangan: ${oldData.keterangan}<br>Nominal: ${formatRp(oldData.nominal)}`;
                 await catatLogSistem('HAPUS', `Data Pengeluaran`, createSingleHTML(`Penghapusan log pengeluaran/pembayaran`, 'PENGELUARAN DIHAPUS', 'fa-solid fa-trash', '#fee2e2', '#f87171', '#b91c1c', oH));
                 
                 refreshHalamanAktif();
@@ -2736,7 +2737,7 @@
             }
         };
 
-        window.printUangKeluarSemua = function() {
+       window.printUangKeluarSemua = function() {
             let filtered = db_uang_keluar.filter(uk => {
                 let dbDate = uk.tanggal ? uk.tanggal.substring(0, 10) : "";
                 return dbDate >= dateRangeUangKeluar.start && dbDate <= dateRangeUangKeluar.end;
@@ -2781,7 +2782,6 @@
                     let emp = db_karyawan.find(k => k.id == item.emp_id);
                     let empName = emp ? emp.name : 'Unknown';
                     
-                    // Terapkan filter text juga jika ada di print
                     if(q && !(`${item.penerima} ${item.keterangan} ${empName} ${item.status_pembayaran} ${item.user_input}`.toLowerCase().includes(q))) return;
                     
                     sumTotal += parseFloat(item.nominal) || 0;
@@ -2799,14 +2799,14 @@
             
             html += `<tr style="background:#f0f0f0; font-weight:bold; font-size:12px;">
                 <td colspan="6" class="text-right" style="padding-top:10px; padding-bottom:10px;">TOTAL PENGELUARAN :</td>
-                <td class="text-right" style="padding-top:10px; padding-bottom:10px;">Rp ${formatRp(sumTotal)}</td>
+                <td class="text-right" style="padding-top:10px; padding-bottom:10px;">${formatRp(sumTotal)}</td>
             </tr>`;
 
             html += '</tbody></table></body></html>';
             let win = window.open('', '_blank'); win.document.write(html); win.document.close();
         };
 
-        window.printSingleUangKeluar = function(id) {
+       window.printSingleUangKeluar = function(id) {
             let item = db_uang_keluar.find(u => u.id == id);
             if(!item) return;
             let emp = db_karyawan.find(k => k.id == item.emp_id);
@@ -2840,7 +2840,7 @@
             <div class="content-row"><div class="label">Keperluan</div><div class="colon">:</div><div class="value">${item.keterangan}</div></div>
             <div class="content-row"><div class="label">Status Pembayaran</div><div class="colon">:</div><div class="value">${item.status_pembayaran}</div></div>
             
-            <div class="nominal-box">Terbilang : Rp ${formatRp(item.nominal)}</div>
+            <div class="nominal-box">Terbilang : ${formatRp(item.nominal)}</div>
 
             <div class="signatures">
                 <div class="sig-box">
