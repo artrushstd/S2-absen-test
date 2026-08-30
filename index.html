@@ -3205,18 +3205,20 @@
             let win = window.open('', '_blank'); win.document.write(html); win.document.close();
         };
 
-        // ================== LOGIKA RESPONSIVE MOBILE ==================
+       // ================== LOGIKA RESPONSIVE MOBILE ==================
         window.toggleSidebar = function() {
             const sidebar = document.getElementById('main-sidebar');
             const overlay = document.getElementById('sidebar-overlay');
+        
             sidebar.classList.toggle('open');
             overlay.classList.toggle('show');
         };
-
+        
         const baseSwitchPage = window.switchPage;
+        
         window.switchPage = function(pageId, element) {
             baseSwitchPage(pageId, element);
-            
+        
             if (window.innerWidth <= 768) {
                 document.getElementById('main-sidebar').classList.remove('open');
                 document.getElementById('sidebar-overlay').classList.remove('show');
