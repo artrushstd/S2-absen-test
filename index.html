@@ -3133,12 +3133,30 @@
             } catch (err) {
                 console.error('Gagal mencatat log pembayaran angsuran:', err);
             }
+        }; // <-- SOLUSI 1: Penutup untuk fungsi window.saveAngsuran yang sebelumnya hilang
         
+        // SOLUSI 2: Melengkapi logika log aktivitas untuk penghapusan kasbon yang terpotong
         const originalDeleteKasbon = window.deleteKasbon;
         window.deleteKasbon = async function(kasbonId, isHistory) {
             let rawKasbon = db_kasbon.find(k => k.id == kasbonId);
             let kasbonData = rawKasbon ? JSON.parse(JSON.stringify(rawKasbon)) : null;
-            let emp = kasbonData ? db_karyawan.find(e => e.id == kasbonData.emp_id) : 
+            let emp = kasbonData ? db_karyawan.find(e => e.id == kasbonData.emp_id) : null; 
+            let empName = emp ? emp.name : 'Unknown';
+            
+            // Eksekusi fungsi hapus aslinya
+            await originalDeleteKasbon(kasbonId, isHistory);
+            
+            // Tambahkan pencatatan ke Log Aktifitas
+            try {
+                if (kasbonData && !db_kasbon.find(k => k.id == kasbonId)) {
+                    let desc = `Menghapus data kasbon dan semua data angsuran/cicilan yang terkait.`;
+                    let oldHtml = `Karyawan: <strong>${empName}</strong><br>Total Pinjaman: ${formatUangLog(kasbonData.total_pinjaman)}`;
+                    await catatLogSistem('HAPUS', `Data Kasbon`, createSingleHTML(desc, 'KASBON DIHAPUS', 'fa-solid fa-trash', '#fee2e2', '#f87171', '#b91c1c', oldHtml));
+                }
+            } catch(err) {
+                console.error(err);
+            }
+        };
             
      // ================== FITUR PRINT PERFORMA ==================
         window.printPerforma = function() {
