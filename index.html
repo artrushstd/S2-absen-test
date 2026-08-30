@@ -1042,7 +1042,8 @@
         
         let dateRangeAbsensi = { start: todayStr, end: todayStr }; 
         let dateRangePayroll = { start: firstDay, end: todayStr };
-        let dateRangeUangKeluar = { start: firstDay, end: todayStr }; 
+        let dateRangeUangKeluar = { start: firstDay, end: todayStr };
+        let dateRangePerforma = { start: firstDay, end: todayStr };
         let filterDashboard = { date: todayStr, shift: '' };
 
         function toggleTheme() {
@@ -3157,7 +3158,357 @@
                 console.error(err);
             }
         };
+
+
+    // ================== FITUR LAPORAN PERFORMA ==================
+        let performaSortColumn = 'name'; 
+        let performaSortOrder = 'asc';
+
+        window.toggleSortPerforma = function(col) {
+            if(performaSortColumn === col) performaSortOrder = performaSortOrder === 'asc' ? 'desc' : 'asc';
+            else { performaSortColumn = col; performaSortOrder = 'asc'; }
+            renderPerforma();
+        };
+
+        window.filterPerforma = function() { 
+            let val = document.getElementById('date-range-performa').value;
+            let range = val.split("to").map(s => s.trim()); 
+            if (range.length > 0 && range[0] !== "") { 
+                dateRangePerforma.start = range[0]; 
+                dateRangePerforma.end = range[1] || range[0]; 
+            } 
+            renderPerforma(); 
+        };
+
+        window.renderPerforma = function() {
+            // Atur icon sorting
+            let cols = ['name', 'berangkat', 'izin', 'sakit', 'alfa', 'telat', 'lembur', 'poin'];
+            cols.forEach(c => { 
+                let icon = document.getElementById('sort-perf-' + c); 
+                if(icon) { 
+                    icon.className = performaSortColumn === c ? (performaSortOrder === 'asc' ? "fa-solid fa-sort-up" : "fa-solid fa-sort-down") : "fa-solid fa-sort"; 
+                    icon.style.color = performaSortColumn === c ? "var(--primary)" : "var(--text-muted)"; 
+                } 
+            });
+
+            let tbody = document.querySelector('#table-performa tbody'); 
+            if(!tbody) return; tbody.innerHTML = '';
+
+            let filteredAbs = db_absensi.filter(ab => {
+                let d = ab.date ? ab.date.substring(0, 10) : "";
+                return d >= dateRangePerforma.start && d <= dateRangePerforma.end;
+            });
+
+            // Siapkan penampung data performa per karyawan
+            let perfData = {};
+            db_karyawan.forEach(emp => {
+                if(emp.status_kerja !== 'Resign') {
+                    perfData[emp.id] = { emp: emp, berangkat: 0, izin: 0, sakit: 0, alfa: 0, telat: 0, lembur: 0, poin: 0 };
+                }
+            });
+
+            let totalBerangkat = 0; let totalIzinSakit = 0; let totalAlfa = 0; let sumPoin = 0;
+            let daysSet = new Set();
+
+            filteredAbs.forEach(ab => {
+                if(perfData[ab.emp_id]) {
+                    daysSet.add(ab.date);
+                    let pd = perfData[ab.emp_id];
+                    let st = ab.status_absen || 'Hadir';
+
+                    if (st === 'Izin') { pd.izin++; totalIzinSakit++; }
+                    else if (st === 'Sakit') { pd.sakit++; totalIzinSakit++; }
+                    else if (st === 'Alfa') { pd.alfa++; totalAlfa++; }
+                    else {
+                        pd.berangkat++; totalBerangkat++;
+                        let p = hitungPoinAkhir(ab);
+                        if(p.lateness > 0) pd.telat++;
+                        pd.lembur += p.lemburTotal;
+                        pd.poin += p.pokok; // Poin performa diambil dari total poin pokok
+                    }
+                }
+            });
+
+            let arr = Object.values(perfData);
+
+            // Terapkan pencarian (Search)
+            let q = document.getElementById('search-performa') ? document.getElementById('search-performa').value.toLowerCase() : '';
+            if(q) {
+                arr = arr.filter(item => item.emp.name.toLowerCase().includes(q));
+            }
+
+            // Terapkan Sorting
+            arr.sort((a, b) => {
+                let res = 0;
+                if(performaSortColumn === 'name') res = a.emp.name.localeCompare(b.emp.name);
+                else if(performaSortColumn === 'berangkat') res = a.berangkat - b.berangkat;
+                else if(performaSortColumn === 'izin') res = a.izin - b.izin;
+                else if(performaSortColumn === 'sakit') res = a.sakit - b.sakit;
+                else if(performaSortColumn === 'alfa') res = a.alfa - b.alfa;
+                else if(performaSortColumn === 'telat') res = a.telat - b.telat;
+                else if(performaSortColumn === 'lembur') res = a.lembur - b.lembur;
+                else if(performaSortColumn === 'poin') res = a.poin - b.poin;
+                return performaSortOrder === 'asc' ? res : -res;
+            });
+
+            let html = '';
+            let activeCount = 0;
+
+            arr.forEach(item => {
+                // Sembunyikan karyawan yang datanya sama sekali kosong 0 (kecuali sedang dicari/search)
+                if(item.berangkat === 0 && item.izin === 0 && item.sakit === 0 && item.alfa === 0 && !q) return;
+                
+                activeCount++;
+                sumPoin += item.poin;
+
+                let openModalAttr = '';
+                if(item.izin > 0 || item.sakit > 0 || item.alfa > 0) {
+                    openModalAttr = `onclick="openDetailPerformaModal(${item.emp.id})" style="cursor:pointer; color:var(--info); font-weight:bold; text-decoration:underline;" title="Lihat detail izin/sakit"`;
+                }
+
+                html += `<tr>
+                    <td><strong>${item.emp.name}</strong></td>
+                    <td class="text-center">${item.berangkat} Hari</td>
+                    <td class="text-center" ${openModalAttr}>${item.izin}</td>
+                    <td class="text-center" ${openModalAttr}>${item.sakit}</td>
+                    <td class="text-center" ${openModalAttr}>${item.alfa}</td>
+                    <td class="text-center" style="${item.telat > 0 ? 'color:var(--danger); font-weight:bold;' : ''}">${item.telat} Kali</td>
+                    <td class="text-center">${formatHours(item.lembur)}</td>
+                    <td class="text-center"><strong>${item.poin.toFixed(2)}</strong></td>
+                </tr>`;
+            });
+
+            if(html === '') {
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center">${q ? 'Data tidak ditemukan' : 'Tidak ada data performa di rentang tanggal ini'}</td></tr>`;
+            } else {
+                tbody.innerHTML = html;
+            }
+
+            // Update Ringkasan/Summary Bar
+            document.getElementById('perf-max-hari').innerText = daysSet.size + " Hari";
+            document.getElementById('perf-tot-berangkat').innerText = totalBerangkat;
+            document.getElementById('perf-tot-izinsakit').innerText = totalIzinSakit;
+            document.getElementById('perf-tot-alfa').innerText = totalAlfa;
             
+            let avg = activeCount > 0 ? (sumPoin / activeCount) : 0;
+            document.getElementById('perf-avg-poin').innerText = avg.toFixed(2);
+        };
+
+        // Fungsi Buka Modal Detail Izin/Sakit/Alfa
+        window.openDetailPerformaModal = function(empId) {
+            let emp = db_karyawan.find(e => e.id == empId);
+            if (!emp) return;
+
+            document.getElementById('detail-performa-title').innerText = "Detail Absensi Khusus - " + emp.name;
+            let tbody = document.querySelector('#table-detail-performa tbody');
+            tbody.innerHTML = '';
+
+            let filteredAbs = db_absensi.filter(ab => {
+                let d = ab.date ? ab.date.substring(0, 10) : "";
+                return ab.emp_id == empId && d >= dateRangePerforma.start && d <= dateRangePerforma.end && (ab.status_absen === 'Izin' || ab.status_absen === 'Sakit' || ab.status_absen === 'Alfa');
+            });
+
+            if (filteredAbs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center">Tidak ada data</td></tr>';
+            } else {
+                let html = '';
+                filteredAbs.sort((a, b) => new Date(b.date) - new Date(a.date)); // Urut terbaru
+                filteredAbs.forEach(ab => {
+                    let badge = ab.status_absen === 'Izin' ? '<span class="badge badge-warning">Izin</span>' :
+                               (ab.status_absen === 'Sakit' ? '<span class="badge badge-info" style="background:#e0f2fe;color:#0284c7;border:1px solid #38bdf8;">Sakit</span>' :
+                               '<span class="badge badge-danger" style="background:#fee2e2;color:#b91c1c;border:1px solid #f87171;">Alfa</span>');
+
+                    html += `<tr>
+                        <td>${ab.date}</td>
+                        <td>${badge}</td>
+                        <td>${ab.keterangan || '-'}</td>
+                        <td><button class="btn btn-danger" style="padding:4px 8px; font-size:12px;" onclick="deleteAbsensi(${ab.emp_id}, '${ab.date}', '${emp.name}')"><i class="fa-solid fa-trash"></i> Hapus</button></td>
+                    </tr>`;
+                });
+                tbody.innerHTML = html;
+            }
+            document.getElementById('modal-detail-performa').style.display = 'flex';
+        };
+
+        window.closeDetailPerformaModal = function() {
+            document.getElementById('modal-detail-performa').style.display = 'none';
+        };
+
+
+// ================== FITUR LAPORAN PERFORMA ==================
+        let performaSortColumn = 'name'; 
+        let performaSortOrder = 'asc';
+
+        window.toggleSortPerforma = function(col) {
+            if(performaSortColumn === col) performaSortOrder = performaSortOrder === 'asc' ? 'desc' : 'asc';
+            else { performaSortColumn = col; performaSortOrder = 'asc'; }
+            renderPerforma();
+        };
+
+        window.filterPerforma = function() { 
+            let val = document.getElementById('date-range-performa').value;
+            let range = val.split("to").map(s => s.trim()); 
+            if (range.length > 0 && range[0] !== "") { 
+                dateRangePerforma.start = range[0]; 
+                dateRangePerforma.end = range[1] || range[0]; 
+            } 
+            renderPerforma(); 
+        };
+
+        window.renderPerforma = function() {
+            // Atur icon sorting
+            let cols = ['name', 'berangkat', 'izin', 'sakit', 'alfa', 'telat', 'lembur', 'poin'];
+            cols.forEach(c => { 
+                let icon = document.getElementById('sort-perf-' + c); 
+                if(icon) { 
+                    icon.className = performaSortColumn === c ? (performaSortOrder === 'asc' ? "fa-solid fa-sort-up" : "fa-solid fa-sort-down") : "fa-solid fa-sort"; 
+                    icon.style.color = performaSortColumn === c ? "var(--primary)" : "var(--text-muted)"; 
+                } 
+            });
+
+            let tbody = document.querySelector('#table-performa tbody'); 
+            if(!tbody) return; tbody.innerHTML = '';
+
+            let filteredAbs = db_absensi.filter(ab => {
+                let d = ab.date ? ab.date.substring(0, 10) : "";
+                return d >= dateRangePerforma.start && d <= dateRangePerforma.end;
+            });
+
+            // Siapkan penampung data performa per karyawan
+            let perfData = {};
+            db_karyawan.forEach(emp => {
+                if(emp.status_kerja !== 'Resign') {
+                    perfData[emp.id] = { emp: emp, berangkat: 0, izin: 0, sakit: 0, alfa: 0, telat: 0, lembur: 0, poin: 0 };
+                }
+            });
+
+            let totalBerangkat = 0; let totalIzinSakit = 0; let totalAlfa = 0; let sumPoin = 0;
+            let daysSet = new Set();
+
+            filteredAbs.forEach(ab => {
+                if(perfData[ab.emp_id]) {
+                    daysSet.add(ab.date);
+                    let pd = perfData[ab.emp_id];
+                    let st = ab.status_absen || 'Hadir';
+
+                    if (st === 'Izin') { pd.izin++; totalIzinSakit++; }
+                    else if (st === 'Sakit') { pd.sakit++; totalIzinSakit++; }
+                    else if (st === 'Alfa') { pd.alfa++; totalAlfa++; }
+                    else {
+                        pd.berangkat++; totalBerangkat++;
+                        let p = hitungPoinAkhir(ab);
+                        if(p.lateness > 0) pd.telat++;
+                        pd.lembur += p.lemburTotal;
+                        pd.poin += p.pokok; // Poin performa diambil dari total poin pokok
+                    }
+                }
+            });
+
+            let arr = Object.values(perfData);
+
+            // Terapkan pencarian (Search)
+            let q = document.getElementById('search-performa') ? document.getElementById('search-performa').value.toLowerCase() : '';
+            if(q) {
+                arr = arr.filter(item => item.emp.name.toLowerCase().includes(q));
+            }
+
+            // Terapkan Sorting
+            arr.sort((a, b) => {
+                let res = 0;
+                if(performaSortColumn === 'name') res = a.emp.name.localeCompare(b.emp.name);
+                else if(performaSortColumn === 'berangkat') res = a.berangkat - b.berangkat;
+                else if(performaSortColumn === 'izin') res = a.izin - b.izin;
+                else if(performaSortColumn === 'sakit') res = a.sakit - b.sakit;
+                else if(performaSortColumn === 'alfa') res = a.alfa - b.alfa;
+                else if(performaSortColumn === 'telat') res = a.telat - b.telat;
+                else if(performaSortColumn === 'lembur') res = a.lembur - b.lembur;
+                else if(performaSortColumn === 'poin') res = a.poin - b.poin;
+                return performaSortOrder === 'asc' ? res : -res;
+            });
+
+            let html = '';
+            let activeCount = 0;
+
+            arr.forEach(item => {
+                // Sembunyikan karyawan yang datanya sama sekali kosong 0 (kecuali sedang dicari/search)
+                if(item.berangkat === 0 && item.izin === 0 && item.sakit === 0 && item.alfa === 0 && !q) return;
+                
+                activeCount++;
+                sumPoin += item.poin;
+
+                let openModalAttr = '';
+                if(item.izin > 0 || item.sakit > 0 || item.alfa > 0) {
+                    openModalAttr = `onclick="openDetailPerformaModal(${item.emp.id})" style="cursor:pointer; color:var(--info); font-weight:bold; text-decoration:underline;" title="Lihat detail izin/sakit"`;
+                }
+
+                html += `<tr>
+                    <td><strong>${item.emp.name}</strong></td>
+                    <td class="text-center">${item.berangkat} Hari</td>
+                    <td class="text-center" ${openModalAttr}>${item.izin}</td>
+                    <td class="text-center" ${openModalAttr}>${item.sakit}</td>
+                    <td class="text-center" ${openModalAttr}>${item.alfa}</td>
+                    <td class="text-center" style="${item.telat > 0 ? 'color:var(--danger); font-weight:bold;' : ''}">${item.telat} Kali</td>
+                    <td class="text-center">${formatHours(item.lembur)}</td>
+                    <td class="text-center"><strong>${item.poin.toFixed(2)}</strong></td>
+                </tr>`;
+            });
+
+            if(html === '') {
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center">${q ? 'Data tidak ditemukan' : 'Tidak ada data performa di rentang tanggal ini'}</td></tr>`;
+            } else {
+                tbody.innerHTML = html;
+            }
+
+            // Update Ringkasan/Summary Bar
+            document.getElementById('perf-max-hari').innerText = daysSet.size + " Hari";
+            document.getElementById('perf-tot-berangkat').innerText = totalBerangkat;
+            document.getElementById('perf-tot-izinsakit').innerText = totalIzinSakit;
+            document.getElementById('perf-tot-alfa').innerText = totalAlfa;
+            
+            let avg = activeCount > 0 ? (sumPoin / activeCount) : 0;
+            document.getElementById('perf-avg-poin').innerText = avg.toFixed(2);
+        };
+
+        // Fungsi Buka Modal Detail Izin/Sakit/Alfa
+        window.openDetailPerformaModal = function(empId) {
+            let emp = db_karyawan.find(e => e.id == empId);
+            if (!emp) return;
+
+            document.getElementById('detail-performa-title').innerText = "Detail Absensi Khusus - " + emp.name;
+            let tbody = document.querySelector('#table-detail-performa tbody');
+            tbody.innerHTML = '';
+
+            let filteredAbs = db_absensi.filter(ab => {
+                let d = ab.date ? ab.date.substring(0, 10) : "";
+                return ab.emp_id == empId && d >= dateRangePerforma.start && d <= dateRangePerforma.end && (ab.status_absen === 'Izin' || ab.status_absen === 'Sakit' || ab.status_absen === 'Alfa');
+            });
+
+            if (filteredAbs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center">Tidak ada data</td></tr>';
+            } else {
+                let html = '';
+                filteredAbs.sort((a, b) => new Date(b.date) - new Date(a.date)); // Urut terbaru
+                filteredAbs.forEach(ab => {
+                    let badge = ab.status_absen === 'Izin' ? '<span class="badge badge-warning">Izin</span>' :
+                               (ab.status_absen === 'Sakit' ? '<span class="badge badge-info" style="background:#e0f2fe;color:#0284c7;border:1px solid #38bdf8;">Sakit</span>' :
+                               '<span class="badge badge-danger" style="background:#fee2e2;color:#b91c1c;border:1px solid #f87171;">Alfa</span>');
+
+                    html += `<tr>
+                        <td>${ab.date}</td>
+                        <td>${badge}</td>
+                        <td>${ab.keterangan || '-'}</td>
+                        <td><button class="btn btn-danger" style="padding:4px 8px; font-size:12px;" onclick="deleteAbsensi(${ab.emp_id}, '${ab.date}', '${emp.name}')"><i class="fa-solid fa-trash"></i> Hapus</button></td>
+                    </tr>`;
+                });
+                tbody.innerHTML = html;
+            }
+            document.getElementById('modal-detail-performa').style.display = 'flex';
+        };
+
+        window.closeDetailPerformaModal = function() {
+            document.getElementById('modal-detail-performa').style.display = 'none';
+        };
+        
      // ================== FITUR PRINT PERFORMA ==================
         window.printPerforma = function() {
             let rawPeriod = document.getElementById('date-range-performa').value;
