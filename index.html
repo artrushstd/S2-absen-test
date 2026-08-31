@@ -553,7 +553,7 @@
                                         <th>Vendor / Penerima Akhir</th>
                                         <th style="min-width:200px;">Keterangan & Rincian</th>
                                         <th>Nominal (Rp)</th>
-                                        <th>Status Pembayaran</th>
+                                        <th>Status & Metode</th>
                                         <th>Aksi</th>
                                     </tr>
                                 </thead>
@@ -667,13 +667,21 @@
             </div>
             
             <div style="display: flex; gap: 16px;">
-                <div class="form-group" style="flex: 1;">
+                <div class="form-group" style="flex: 1.2;">
                     <label>Nominal (Rp)</label>
                     <input type="number" id="uk-nominal" class="input-control" min="0" placeholder="0">
                 </div>
                 <div class="form-group" style="flex: 1;">
-                    <label>Status / Keterangan Pembayaran</label>
-                    <input type="text" id="uk-status" class="input-control" placeholder="Cth: Lunas Cash, Transfer, Bon">
+                    <label>Status Pembayaran</label>
+                    <input type="text" id="uk-status" class="input-control" value="LUNAS">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label>Jenis Pembayaran</label>
+                    <select id="uk-metode" class="input-control">
+                        <option value="CASH">CASH</option>
+                        <option value="TRANSFER">TRANSFER</option>
+                        <option value="QRIS">QRIS</option>
+                    </select>
                 </div>
             </div>
             
@@ -2398,8 +2406,7 @@
             let q = document.getElementById('search-uangkeluar') ? document.getElementById('search-uangkeluar').value.toLowerCase() : '';
             if (q) {
                 processedList = processedList.filter(item => {
-                    let searchString = `${item.penerima} ${item.keterangan} ${item.emp_name} ${item.status_pembayaran} ${item.user_input}`.toLowerCase();
-                    return searchString.includes(q);
+                    let searchString = `${item.penerima} ${item.keterangan} ${item.emp_name} ${item.status_pembayaran} ${item.metode_pembayaran} ${item.user_input}`.toLowerCase();
                 });
             }
 
@@ -2421,8 +2428,8 @@
                     actionBtns += `<button class="btn btn-danger" style="padding:4px 8px; font-size:12px; margin-left:4px;" onclick="deleteUangKeluar(${item.id}, '${item.keterangan}')" title="Hapus"><i class="fa-solid fa-trash"></i></button>`;
                 }
                 
-                let badgeStatus = item.status_pembayaran.toLowerCase().includes('lunas') ? `<span class="badge badge-active">${item.status_pembayaran}</span>` : `<span class="badge badge-warning">${item.status_pembayaran}</span>`;
-
+                let badgeStatus = item.status_pembayaran.toUpperCase().includes('LUNAS') ? `<span class="badge badge-active">${item.status_pembayaran}</span>` : `<span class="badge badge-warning">${item.status_pembayaran}</span>`;
+                let badgeMetode = `<span class="badge badge-info" style="margin-left:4px;">${item.metode_pembayaran || 'CASH'}</span>`;
                 htmlTemp += `<tr>
                     <td>${item.tanggal}</td>
                     <td style="font-size:12px; color:var(--text-muted);">${item.user_input}</td>
@@ -2430,7 +2437,7 @@
                     <td style="color:var(--info); font-weight:600;">${item.penerima}</td>
                     <td>${item.keterangan}</td>
                     <td>${formatRp(item.nominal)}</td>
-                    <td>${badgeStatus}</td>
+                    <td>${badgeStatus} ${badgeMetode}</td>
                     <td style="white-space:nowrap;">${actionBtns}</td>
                 </tr>`;
             });
@@ -2445,7 +2452,7 @@
             db_karyawan.filter(k => k.status_kerja !== 'Resign').forEach(e => {
                 sel.innerHTML += '<option value="'+e.id+'">'+e.name+' (ID: '+e.id+')</option>';
             });
-
+        
             if (editId) {
                 let uk = db_uang_keluar.find(u => u.id == editId);
                 if(uk) {
@@ -2456,7 +2463,8 @@
                     document.getElementById('uk-penerima').value = uk.penerima;
                     document.getElementById('uk-keterangan').value = uk.keterangan;
                     document.getElementById('uk-nominal').value = uk.nominal;
-                    document.getElementById('uk-status').value = uk.status_pembayaran;
+                    document.getElementById('uk-status').value = uk.status_pembayaran || 'LUNAS';
+                    document.getElementById('uk-metode').value = uk.metode_pembayaran || 'CASH';
                     document.getElementById('btn-save-uk').innerHTML = '<i class="fa-solid fa-save"></i> Simpan Perubahan';
                 }
             } else {
@@ -2467,7 +2475,8 @@
                 document.getElementById('uk-penerima').value = '';
                 document.getElementById('uk-keterangan').value = '';
                 document.getElementById('uk-nominal').value = '';
-                document.getElementById('uk-status').value = '';
+                document.getElementById('uk-status').value = 'LUNAS'; // Default LUNAS
+                document.getElementById('uk-metode').value = 'CASH'; // Default CASH
                 document.getElementById('btn-save-uk').innerHTML = '<i class="fa-solid fa-save"></i> Simpan Data';
             }
             
@@ -2485,23 +2494,24 @@
             let penerima = document.getElementById('uk-penerima').value.trim();
             let keterangan = document.getElementById('uk-keterangan').value.trim();
             let nominal = parseFloat(document.getElementById('uk-nominal').value);
-            let status_pembayaran = document.getElementById('uk-status').value.trim() || 'Lunas';
+            let status_pembayaran = document.getElementById('uk-status').value.trim() || 'LUNAS';
+            let metode_pembayaran = document.getElementById('uk-metode').value;
             
             if(!tanggal || !emp_id || !penerima || !keterangan || !nominal || nominal <= 0) {
                 return alert("Mohon lengkapi semua kolom form dengan benar!");
             }
-
+        
             let currentUser = "Admin";
             try { let auth = JSON.parse(sessionStorage.getItem('auth_user')); if(auth) currentUser = auth.name; } catch(e){}
-
+        
             let payload = {
                 tanggal: tanggal, emp_id: emp_id, penerima: penerima, keterangan: keterangan,
-                nominal: nominal, status_pembayaran: status_pembayaran, user_input: currentUser
+                nominal: nominal, status_pembayaran: status_pembayaran, metode_pembayaran: metode_pembayaran, user_input: currentUser
             };
-
+        
             let btn = document.getElementById('btn-save-uk');
             btn.disabled = true; btn.innerText = "Menyimpan...";
-
+        
             try {
                 if (editId) {
                     let oldData = db_uang_keluar.find(u => u.id == editId);
@@ -2514,7 +2524,6 @@
                     let oH = `Keterangan: ${oldData.keterangan}<br>Nominal: ${formatRp(oldData.nominal)}`;
                     let nH = `Keterangan: ${keterangan}<br>Nominal: ${formatRp(nominal)}`;
                     await catatLogSistem('EDIT', `Data Pengeluaran`, createBeforeAfterHTML(`Mengubah record pengeluaran ke ${penerima}`, oH, nH));
-                    
                     alert("Pengeluaran berhasil diperbarui.");
                 } else {
                     const { data, error } = await supabaseApp.from('uang_keluar').insert([payload]).select();
@@ -2522,9 +2531,8 @@
                     
                     if(data.length) db_uang_keluar.unshift(data[0]);
                     
-                    let nH = `Penerima: ${penerima}<br>Keterangan: ${keterangan}<br>Nominal: ${formatRp(nominal)}`;
+                    let nH = `Penerima: ${penerima}<br>Keterangan: ${keterangan}<br>Metode: ${metode_pembayaran}<br>Nominal: ${formatRp(nominal)}`;
                     await catatLogSistem('TAMBAH', `Pengeluaran Baru`, createSingleHTML(`Pencatatan pengeluaran uang baru`, 'UANG KELUAR', 'fa-solid fa-money-bill-transfer', '#d1fae5', '#34d399', '#047857', nH));
-                    
                     alert("Pengeluaran berhasil ditambahkan.");
                 }
                 closeUangKeluarModal();
@@ -2627,50 +2635,79 @@
             if(!item) return;
             let emp = db_karyawan.find(k => k.id == item.emp_id);
             let empName = emp ? emp.name : 'Unknown';
+            let metode = item.metode_pembayaran || 'CASH';
             
+            // Struktur single receipt yang akan digandakan (2x)
+            let receiptHTML = `
+                <div class="receipt-container">
+                    <div class="header">
+                        <h2>BUKTI PENGELUARAN KAS</h2>
+                        <p>Suharno 2 - Tanda Terima Pembayaran</p>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; flex-grow: 1;">
+                        <div style="flex:1;">
+                            <div class="content-row"><div class="label">No. Referensi</div><div class="colon">:</div><div class="value">UK-${item.id}-${item.tanggal.replace(/-/g,'')}</div></div>
+                            <div class="content-row"><div class="label">Tanggal</div><div class="colon">:</div><div class="value">${item.tanggal}</div></div>
+                            <div class="content-row"><div class="label">Diserahkan Kepada</div><div class="colon">:</div><div class="value"><strong>${item.penerima}</strong></div></div>
+                            <div class="content-row"><div class="label">Melalui Karyawan</div><div class="colon">:</div><div class="value">${empName}</div></div>
+                            <div class="content-row"><div class="label">Keperluan</div><div class="colon">:</div><div class="value">${item.keterangan}</div></div>
+                            <div class="content-row"><div class="label">Status & Metode</div><div class="colon">:</div><div class="value">${item.status_pembayaran} - <strong>${metode}</strong></div></div>
+                        </div>
+                    </div>
+                    
+                    <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:10px;">
+                        <div class="nominal-box">Terbilang : ${formatRp(item.nominal)}</div>
+                        <div class="signatures">
+                            <div class="sig-box">
+                                <div>Disetujui / Dibuat Oleh,</div>
+                                <div class="sig-line"></div>
+                                <div>${item.user_input} (Admin)</div>
+                            </div>
+                            <div class="sig-box">
+                                <div>Penerima / Perantara,</div>
+                                <div class="sig-line"></div>
+                                <div>${empName}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        
             let html = `<html><head><title>Kwitansi Pengeluaran</title><style>
-                @page { size: A5 landscape; margin: 15mm; } 
-                body { font-family: "Courier New", Courier, monospace; color: #000; margin: 0; padding: 20px; border: 2px dashed #333; } 
-                .header { text-align: center; margin-bottom: 20px; border-bottom: 1px solid #000; padding-bottom: 10px; } 
-                .header h2 { margin: 0; font-size: 22px; text-decoration: underline; } 
-                .header p { margin: 5px 0 0 0; font-size: 14px; } 
-                .content-row { margin-bottom: 12px; font-size: 15px; display: flex; }
+                @page { size: A4 landscape; margin: 10mm; } 
+                body { font-family: "Courier New", Courier, monospace; color: #000; margin: 0; padding: 0; box-sizing: border-box; height: 100vh; display: flex; flex-direction: column; justify-content: space-between;} 
+                
+                .receipt-container { 
+                    height: 48%; /* Setup 48% agar pas atas-bawah + jarak margin */
+                    padding: 15px 25px; 
+                    border: 2px dashed #333; 
+                    box-sizing: border-box; 
+                    display: flex; 
+                    flex-direction: column; 
+                    justify-content: space-between;
+                    page-break-inside: avoid;
+                }
+                
+                .header { text-align: center; margin-bottom: 15px; border-bottom: 1px solid #000; padding-bottom: 8px; } 
+                .header h2 { margin: 0; font-size: 20px; text-decoration: underline; font-weight: bold; } 
+                .header p { margin: 5px 0 0 0; font-size: 13px; } 
+                
+                .content-row { margin-bottom: 7px; font-size: 15px; display: flex; align-items: flex-end; }
                 .content-row .label { width: 180px; font-weight: bold; }
                 .content-row .colon { width: 20px; }
-                .content-row .value { flex: 1; border-bottom: 1px dotted #999; }
-                .nominal-box { margin-top: 25px; background: #f0f0f0; padding: 10px 15px; font-size: 20px; font-weight: bold; display: inline-block; border: 2px solid #000; }
-                .signatures { margin-top: 40px; display: flex; justify-content: space-between; text-align: center; }
-                .sig-box { width: 200px; }
-                .sig-line { margin-top: 60px; border-bottom: 1px solid #000; }
+                .content-row .value { flex: 1; border-bottom: 1px dotted #666; }
+                
+                .nominal-box { background: #f0f0f0; padding: 10px 15px; font-size: 18px; font-weight: bold; border: 2px solid #000; display: inline-block; }
+                .signatures { display: flex; gap: 50px; text-align: center; }
+                .sig-box { width: 200px; font-size: 14px; }
+                .sig-line { margin-top: 45px; border-bottom: 1px solid #000; margin-bottom: 5px; }
+                
+                @media print {
+                    html, body { height: 100%; overflow: hidden; }
+                }
             </style></head><body onload="window.print();">
-            
-            <div class="header">
-                <h2>BUKTI PENGELUARAN KAS</h2>
-                <p>Suharno 2 - Tanda Terima Pembayaran</p>
-            </div>
-
-            <div class="content-row"><div class="label">No. Referensi</div><div class="colon">:</div><div class="value">UK-${item.id}-${item.tanggal.replace(/-/g,'')}</div></div>
-            <div class="content-row"><div class="label">Tanggal</div><div class="colon">:</div><div class="value">${item.tanggal}</div></div>
-            <div class="content-row"><div class="label">Diserahkan Kepada</div><div class="colon">:</div><div class="value"><strong>${item.penerima}</strong></div></div>
-            <div class="content-row"><div class="label">Melalui Karyawan</div><div class="colon">:</div><div class="value">${empName}</div></div>
-            <div class="content-row"><div class="label">Keperluan</div><div class="colon">:</div><div class="value">${item.keterangan}</div></div>
-            <div class="content-row"><div class="label">Status Pembayaran</div><div class="colon">:</div><div class="value">${item.status_pembayaran}</div></div>
-            
-            <div class="nominal-box">Terbilang : ${formatRp(item.nominal)}</div>
-
-            <div class="signatures">
-                <div class="sig-box">
-                    <div>Disetujui / Dibuat Oleh,</div>
-                    <div class="sig-line"></div>
-                    <div>${item.user_input} (Admin)</div>
-                </div>
-                <div class="sig-box">
-                    <div>Penerima / Perantara,</div>
-                    <div class="sig-line"></div>
-                    <div>${empName}</div>
-                </div>
-            </div>
-
+                ${receiptHTML}
+                ${receiptHTML}
             </body></html>`;
             
             let win = window.open('', '_blank'); win.document.write(html); win.document.close();
