@@ -2637,25 +2637,24 @@
             let empName = emp ? emp.name : 'Unknown';
             let metode = item.metode_pembayaran || 'CASH';
             
-            // Struktur single receipt yang akan digandakan (2x)
+            // Template 1 Kwitansi
             let receiptHTML = `
                 <div class="receipt-container">
                     <div class="header">
                         <h2>BUKTI PENGELUARAN KAS</h2>
                         <p>Suharno 2 - Tanda Terima Pembayaran</p>
                     </div>
-                    <div style="display:flex; justify-content:space-between; flex-grow: 1;">
-                        <div style="flex:1;">
-                            <div class="content-row"><div class="label">No. Referensi</div><div class="colon">:</div><div class="value">UK-${item.id}-${item.tanggal.replace(/-/g,'')}</div></div>
-                            <div class="content-row"><div class="label">Tanggal</div><div class="colon">:</div><div class="value">${item.tanggal}</div></div>
-                            <div class="content-row"><div class="label">Diserahkan Kepada</div><div class="colon">:</div><div class="value"><strong>${item.penerima}</strong></div></div>
-                            <div class="content-row"><div class="label">Melalui</div><div class="colon">:</div><div class="value">${empName}</div></div>
-                            <div class="content-row"><div class="label">Keperluan</div><div class="colon">:</div><div class="value">${item.keterangan}</div></div>
-                            <div class="content-row"><div class="label">Status & Metode</div><div class="colon">:</div><div class="value">${item.status_pembayaran} - <strong>${metode}</strong></div></div>
-                        </div>
+                    
+                    <div class="content-wrapper">
+                        <div class="content-row"><div class="label">No. Referensi</div><div class="colon">:</div><div class="value">UK-${item.id}-${item.tanggal.replace(/-/g,'')}</div></div>
+                        <div class="content-row"><div class="label">Tanggal</div><div class="colon">:</div><div class="value">${item.tanggal}</div></div>
+                        <div class="content-row"><div class="label">Diserahkan Kepada</div><div class="colon">:</div><div class="value"><strong>${item.penerima}</strong></div></div>
+                        <div class="content-row"><div class="label">Melalui Karyawan</div><div class="colon">:</div><div class="value">${empName}</div></div>
+                        <div class="content-row"><div class="label">Keperluan</div><div class="colon">:</div><div class="value">${item.keterangan}</div></div>
+                        <div class="content-row"><div class="label">Status & Metode</div><div class="colon">:</div><div class="value">${item.status_pembayaran} - <strong>${metode}</strong></div></div>
                     </div>
                     
-                    <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:10px;">
+                    <div class="footer-wrapper">
                         <div class="nominal-box">Terbilang : ${formatRp(item.nominal)}</div>
                         <div class="signatures">
                             <div class="sig-box">
@@ -2674,39 +2673,47 @@
             `;
         
             let html = `<html><head><title>Kwitansi Pengeluaran</title><style>
-                @page { size: A4 landscape; margin: 10mm; } 
-                body { font-family: "Courier New", Courier, monospace; color: #000; margin: 0; padding: 0; box-sizing: border-box; height: 100vh; display: flex; flex-direction: column; justify-content: space-between;} 
+                /* Ubah menjadi A4 Portrait dengan margin 10mm */
+                @page { size: A4 portrait; margin: 10mm; } 
+                body { 
+                    font-family: "Courier New", Courier, monospace; 
+                    color: #000; 
+                    margin: 0; 
+                    padding: 0; 
+                    box-sizing: border-box; 
+                } 
                 
                 .receipt-container { 
-                    height: 48%; /* Setup 48% agar pas atas-bawah + jarak margin */
+                    /* Set tinggi persis di bawah setengah kertas A4 (Kertas A4 tingginya 297mm, setengahnya ~148mm) */
+                    height: 135mm; 
                     padding: 15px 25px; 
                     border: 2px dashed #333; 
                     box-sizing: border-box; 
                     display: flex; 
                     flex-direction: column; 
                     justify-content: space-between;
-                    page-break-inside: avoid;
                 }
                 
-                .header { text-align: center; margin-bottom: 15px; border-bottom: 1px solid #000; padding-bottom: 8px; } 
+                .header { text-align: center; margin-bottom: 10px; border-bottom: 1px solid #000; padding-bottom: 8px; } 
                 .header h2 { margin: 0; font-size: 20px; text-decoration: underline; font-weight: bold; } 
                 .header p { margin: 5px 0 0 0; font-size: 13px; } 
                 
-                .content-row { margin-bottom: 7px; font-size: 15px; display: flex; align-items: flex-end; }
-                .content-row .label { width: 180px; font-weight: bold; }
+                .content-wrapper { flex-grow: 1; }
+                .content-row { margin-bottom: 8px; font-size: 14px; display: flex; align-items: flex-end; }
+                .content-row .label { width: 160px; font-weight: bold; }
                 .content-row .colon { width: 20px; }
                 .content-row .value { flex: 1; border-bottom: 1px dotted #666; }
                 
-                .nominal-box { background: #f0f0f0; padding: 10px 15px; font-size: 18px; font-weight: bold; border: 2px solid #000; display: inline-block; }
-                .signatures { display: flex; gap: 50px; text-align: center; }
-                .sig-box { width: 200px; font-size: 14px; }
+                /* Penyesuaian footer agar pas di format Portrait yang lebih sempit */
+                .footer-wrapper { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 10px; }
+                .nominal-box { background: #f0f0f0; padding: 10px 15px; font-size: 16px; font-weight: bold; border: 2px solid #000; display: inline-block; }
+                
+                .signatures { display: flex; gap: 30px; text-align: center; }
+                .sig-box { width: 160px; font-size: 13px; }
                 .sig-line { margin-top: 45px; border-bottom: 1px solid #000; margin-bottom: 5px; }
                 
-                @media print {
-                    html, body { height: 100%; overflow: hidden; }
-                }
             </style></head><body onload="window.print();">
-                ${receiptHTML}
+                <!-- Hanya dipanggil 1 kali agar bagian bawah kertas A4 kosong -->
                 ${receiptHTML}
             </body></html>`;
             
