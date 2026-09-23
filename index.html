@@ -2767,20 +2767,22 @@
             `;
         
             let html = `<html><head><title>Kwitansi Pengeluaran</title><style>
-                @page { size: A4 portrait; margin: 10mm; } 
+                /* MENGHILANGKAN HEADER & FOOTER DEFAULT BROWSER (about:blank) */
+                @page { size: A4 portrait; margin: 0; } 
+                
                 body { 
                     font-family: "Courier New", Courier, monospace; 
                     color: #000; 
                     margin: 0; 
-                    padding: 0; 
+                    padding: 10mm; /* Margin fisik kertas dipindah ke dalam body */
                     box-sizing: border-box; 
                 } 
                 
-                /* TINGGI DIBATASI SETENGAH A4 (140mm) */
+                /* TINGGI DIBATASI AGAR PAS SETENGAH A4 */
                 .page-container {
                     display: flex;
                     flex-direction: column;
-                    height: 140mm; 
+                    height: 135mm; 
                 }
                 
                 .receipt-part { 
@@ -2809,7 +2811,6 @@
                 .content-row .colon { width: 15px; }
                 .content-row .value { flex: 1; border-bottom: 1px dotted #666; }
                 
-                /* DESAIN PERINGATAN YANG LEBIH ELEGAN DAN HALUS */
                 .warning-box {
                     border: 1px solid #555;
                     background-color: #f8f9fa;
