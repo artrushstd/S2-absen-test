@@ -2694,70 +2694,70 @@
                     <div class="receipt-part">
                         <div class="header">
                             <h2>BUKTI KAS KELUAR (ARSIP INTERNAL)</h2>
-                            <p>Suharno 2 - Bukti Penyerahan Dana Ke Perantara</p>
+                            <p>Suharno 2 - Dokumen Pencatatan Kas</p>
                         </div>
                         
                         <div class="content-wrapper">
                             <div class="content-row"><div class="label">No. Referensi</div><div class="colon">:</div><div class="value">UK-${item.id}-${item.tanggal.replace(/-/g,'')}</div></div>
                             <div class="content-row"><div class="label">Tanggal</div><div class="colon">:</div><div class="value">${item.tanggal}</div></div>
-                            <div class="content-row"><div class="label">Diserahkan Ke (Perantara)</div><div class="colon">:</div><div class="value"><strong>${empName}</strong></div></div>
-                            <div class="content-row"><div class="label">Tujuan Pembayaran (Vendor)</div><div class="colon">:</div><div class="value">${item.penerima}</div></div>
+                            <div class="content-row"><div class="label">Melalui (Perantara)</div><div class="colon">:</div><div class="value">${empName}</div></div>
+                            <div class="content-row"><div class="label">Penerima Akhir</div><div class="colon">:</div><div class="value"><strong>${item.penerima}</strong></div></div>
                             <div class="content-row"><div class="label">Keperluan</div><div class="colon">:</div><div class="value">${item.keterangan}</div></div>
                             <div class="content-row"><div class="label">Status & Metode</div><div class="colon">:</div><div class="value">${item.status_pembayaran} - <strong>${metode}</strong></div></div>
                         </div>
                         
                         <div class="footer-wrapper">
                             <div class="nominal-box">
-                                <span>Terbilang :</span><br>
-                                <span style="font-size: 18px;">${formatRp(item.nominal)}</span>
+                                <span style="font-size: 11px; font-weight: normal;">Terbilang :</span><br>
+                                <span style="font-size: 15px;">${formatRp(item.nominal)}</span>
                             </div>
                             <div class="signatures">
                                 <div class="sig-box">
-                                    <div class="sig-title">Dibuat & Diserahkan Oleh,</div>
+                                    <div class="sig-title">Dikeluarkan Oleh,</div>
                                     <div class="sig-line"></div>
-                                    <div class="sig-name">${item.user_input} (Kasir / Admin)</div>
+                                    <div class="sig-name">${item.user_input} (Kasir)</div>
                                 </div>
                                 <div class="sig-box">
-                                    <div class="sig-title">Menerima Dana / Perantara,</div>
+                                    <div class="sig-title">Penerima Akhir,</div>
                                     <div class="sig-line"></div>
-                                    <div class="sig-name">( ${empName} )</div>
+                                    <div class="sig-name">( ${item.penerima} )</div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- ================= GARIS POTONG (HANYA GARIS PUTUS-PUTUS) ================= -->
+                    <!-- ================= GARIS POTONG MURNI DASHED LINE ================= -->
                     <div class="cut-line"></div>
 
                     <!-- ================= BAGIAN 2: PENERIMA AKHIR (BAWAH) ================= -->
                     <div class="receipt-part">
                         <div class="header">
-                            <h2>KWITANSI BUKTI PEMBAYARAN</h2>
-                            <p>Suharno 2 - Tanda Terima Penerima Akhir</p>
+                            <h2>KWITANSI PEMBAYARAN</h2>
+                            <p>Suharno 2 - Tanda Terima Bukti Dana Keluar</p>
                         </div>
                         
                         <div class="content-wrapper">
                             <div class="content-row"><div class="label">No. Referensi</div><div class="colon">:</div><div class="value">UK-${item.id}-${item.tanggal.replace(/-/g,'')}</div></div>
                             <div class="content-row"><div class="label">Tanggal</div><div class="colon">:</div><div class="value">${item.tanggal}</div></div>
                             <div class="content-row"><div class="label">Terima Dari</div><div class="colon">:</div><div class="value"><strong>Suharno 2</strong> (Melalui: ${empName})</div></div>
-                            <div class="content-row"><div class="label">Penerima Akhir</div><div class="colon">:</div><div class="value"><strong>${item.penerima}</strong></div></div>
+                            <div class="content-row"><div class="label">Diserahkan Ke</div><div class="colon">:</div><div class="value"><strong>${item.penerima}</strong></div></div>
                             <div class="content-row"><div class="label">Keperluan</div><div class="colon">:</div><div class="value">${item.keterangan}</div></div>
                         </div>
                         
                         <div class="warning-box">
-                            PERHATIAN: KWITANSI INI HANYA SAH JIKA DITERIMA BERSAMAAN DENGAN UANG TUNAI SEBESAR NOMINAL DI BAWAH INI. BILA UANG TIDAK ADA / KURANG, JANGAN DITANDATANGANI!
+                            Mohon pastikan kwitansi ini diterima bersamaan dengan uang tunai sesuai nominal di bawah ini. Kwitansi ini merupakan bukti serah terima yang sah apabila dana telah diterima dengan kesesuaian nominal tersebut.
                         </div>
                         
                         <div class="footer-wrapper">
                             <div class="nominal-box">
-                                <span>Terbilang :</span><br>
-                                <span style="font-size: 18px;">${formatRp(item.nominal)}</span>
+                                <span style="font-size: 11px; font-weight: normal;">Terbilang :</span><br>
+                                <span style="font-size: 15px;">${formatRp(item.nominal)}</span>
                             </div>
                             <div class="signatures" style="justify-content: flex-end; width: auto;">
                                 <div class="sig-box">
-                                    <div class="sig-title">Tanda Terima / Penerima Pembayaran,</div>
+                                    <div class="sig-title">Kasir / Admin,</div>
                                     <div class="sig-line"></div>
-                                    <div class="sig-name">( ${item.penerima} )</div>
+                                    <div class="sig-name">( ${item.user_input} )</div>
                                 </div>
                             </div>
                         </div>
@@ -2776,85 +2776,84 @@
                     box-sizing: border-box; 
                 } 
                 
+                /* TINGGI DIBATASI SETENGAH A4 (140mm) */
                 .page-container {
                     display: flex;
                     flex-direction: column;
-                    height: 277mm; 
+                    height: 140mm; 
                 }
                 
                 .receipt-part { 
                     flex: 1; 
-                    padding: 15px 25px; 
-                    border: 2px dashed #333; 
+                    padding: 10px 15px; 
+                    border: 1.5px dashed #333; 
                     box-sizing: border-box; 
                     display: flex; 
                     flex-direction: column; 
                     justify-content: space-between;
                 }
                 
-                /* GARIS POTONG MURNI DASHED LINE */
                 .cut-line {
-                    margin: 15px 0;
-                    border-top: 2px dashed #000;
+                    margin: 8px 0;
+                    border-top: 2px dashed #888;
                     width: 100%;
                 }
                 
-                .header { text-align: center; margin-bottom: 15px; border-bottom: 1px solid #000; padding-bottom: 10px; } 
-                .header h2 { margin: 0; font-size: 18px; text-decoration: underline; font-weight: bold; } 
-                .header p { margin: 5px 0 0 0; font-size: 13px; } 
+                .header { text-align: center; margin-bottom: 8px; border-bottom: 1px solid #000; padding-bottom: 6px; } 
+                .header h2 { margin: 0; font-size: 15px; text-decoration: underline; font-weight: bold; } 
+                .header p { margin: 2px 0 0 0; font-size: 11px; } 
                 
-                .content-wrapper { flex-grow: 1; margin-top: 5px; }
-                .content-row { margin-bottom: 8px; font-size: 14px; display: flex; align-items: flex-end; }
-                .content-row .label { width: 190px; font-weight: bold; }
-                .content-row .colon { width: 20px; }
+                .content-wrapper { flex-grow: 1; }
+                .content-row { margin-bottom: 4px; font-size: 11px; display: flex; align-items: flex-end; }
+                .content-row .label { width: 140px; font-weight: bold; }
+                .content-row .colon { width: 15px; }
                 .content-row .value { flex: 1; border-bottom: 1px dotted #666; }
                 
+                /* DESAIN PERINGATAN YANG LEBIH ELEGAN DAN HALUS */
                 .warning-box {
-                    border: 2px solid #000;
+                    border: 1px solid #555;
                     background-color: #f8f9fa;
-                    padding: 8px 10px;
-                    margin: 10px 0;
-                    font-size: 12px;
+                    padding: 6px 8px;
+                    margin: 6px 0;
+                    font-size: 10px;
                     text-align: center;
-                    font-weight: bold;
+                    font-style: italic;
                 }
                 
-                /* PENYESUAIAN LAYOUT BAWAH (FOOTER) AGAR PRESISI DAN TIDAK TABRAKAN */
                 .footer-wrapper { 
                     display: flex; 
                     justify-content: space-between; 
                     align-items: flex-end; 
-                    margin-top: 20px;
+                    margin-top: 10px;
                     width: 100%;
                 }
                 
                 .nominal-box { 
                     background: #f0f0f0; 
-                    padding: 10px 20px; 
-                    font-size: 14px; 
+                    padding: 6px 12px; 
                     font-weight: bold; 
-                    border: 2px solid #000; 
+                    border: 1.5px solid #000; 
                     display: inline-block;
-                    min-width: 180px;
+                    min-width: 140px;
                 }
                 
                 .signatures { 
                     display: flex; 
-                    gap: 30px; 
+                    gap: 25px; 
                     justify-content: flex-end;
                 }
                 
                 .sig-box { 
-                    width: 180px; 
+                    width: 140px; 
                     display: flex;
                     flex-direction: column;
                     align-items: center;
                     text-align: center;
                 }
                 
-                .sig-title { font-size: 13px; height: 30px; }
-                .sig-line { width: 100%; margin-top: 50px; border-bottom: 1px solid #000; margin-bottom: 5px; }
-                .sig-name { font-size: 13px; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+                .sig-title { font-size: 11px; height: 20px; }
+                .sig-line { width: 100%; margin-top: 35px; border-bottom: 1px solid #000; margin-bottom: 4px; }
+                .sig-name { font-size: 11px; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
                 
             </style></head><body onload="window.print();">
                 ${receiptHTML}
