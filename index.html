@@ -2707,26 +2707,27 @@
                         </div>
                         
                         <div class="footer-wrapper">
-                            <div class="nominal-box">Terbilang : ${formatRp(item.nominal)}</div>
+                            <div class="nominal-box">
+                                <span>Terbilang :</span><br>
+                                <span style="font-size: 18px;">${formatRp(item.nominal)}</span>
+                            </div>
                             <div class="signatures">
                                 <div class="sig-box">
-                                    <div>Dibuat & Diserahkan Oleh,</div>
+                                    <div class="sig-title">Dibuat & Diserahkan Oleh,</div>
                                     <div class="sig-line"></div>
-                                    <div>${item.user_input} (Kasir / Admin)</div>
+                                    <div class="sig-name">${item.user_input} (Kasir / Admin)</div>
                                 </div>
                                 <div class="sig-box">
-                                    <div>Menerima Dana / Perantara,</div>
+                                    <div class="sig-title">Menerima Dana / Perantara,</div>
                                     <div class="sig-line"></div>
-                                    <div>( ${empName} )</div>
+                                    <div class="sig-name">( ${empName} )</div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- ================= GARIS POTONG ================= -->
-                    <div class="cut-line">
-                        &#9986; - - - - - - - - - - - - - - POTONG DI SINI UNTUK DISERAHKAN KE VENDOR - - - - - - - - - - - - - - &#9986;
-                    </div>
+                    <!-- ================= GARIS POTONG (HANYA GARIS PUTUS-PUTUS) ================= -->
+                    <div class="cut-line"></div>
 
                     <!-- ================= BAGIAN 2: PENERIMA AKHIR (BAWAH) ================= -->
                     <div class="receipt-part">
@@ -2743,18 +2744,20 @@
                             <div class="content-row"><div class="label">Keperluan</div><div class="colon">:</div><div class="value">${item.keterangan}</div></div>
                         </div>
                         
-                        <!-- KOTAK PERINGATAN (HANYA DI BAGIAN PENERIMA) -->
                         <div class="warning-box">
                             PERHATIAN: KWITANSI INI HANYA SAH JIKA DITERIMA BERSAMAAN DENGAN UANG TUNAI SEBESAR NOMINAL DI BAWAH INI. BILA UANG TIDAK ADA / KURANG, JANGAN DITANDATANGANI!
                         </div>
                         
                         <div class="footer-wrapper">
-                            <div class="nominal-box">Terbilang : ${formatRp(item.nominal)}</div>
-                            <div class="signatures" style="justify-content: flex-end;">
+                            <div class="nominal-box">
+                                <span>Terbilang :</span><br>
+                                <span style="font-size: 18px;">${formatRp(item.nominal)}</span>
+                            </div>
+                            <div class="signatures" style="justify-content: flex-end; width: auto;">
                                 <div class="sig-box">
-                                    <div>Tanda Terima / Penerima Pembayaran,</div>
+                                    <div class="sig-title">Tanda Terima / Penerima Pembayaran,</div>
                                     <div class="sig-line"></div>
-                                    <div>( ${item.penerima} )</div>
+                                    <div class="sig-name">( ${item.penerima} )</div>
                                 </div>
                             </div>
                         </div>
@@ -2776,11 +2779,11 @@
                 .page-container {
                     display: flex;
                     flex-direction: column;
-                    height: 277mm; /* Total area cetak A4 minus margin */
+                    height: 277mm; 
                 }
                 
                 .receipt-part { 
-                    flex: 1; /* Membagi dua rata bagian atas dan bawah */
+                    flex: 1; 
                     padding: 15px 25px; 
                     border: 2px dashed #333; 
                     box-sizing: border-box; 
@@ -2789,20 +2792,18 @@
                     justify-content: space-between;
                 }
                 
+                /* GARIS POTONG MURNI DASHED LINE */
                 .cut-line {
-                    text-align: center;
-                    margin: 10px 0;
-                    font-size: 14px;
-                    font-weight: bold;
-                    letter-spacing: 2px;
-                    color: #555;
+                    margin: 15px 0;
+                    border-top: 2px dashed #000;
+                    width: 100%;
                 }
                 
-                .header { text-align: center; margin-bottom: 10px; border-bottom: 1px solid #000; padding-bottom: 8px; } 
+                .header { text-align: center; margin-bottom: 15px; border-bottom: 1px solid #000; padding-bottom: 10px; } 
                 .header h2 { margin: 0; font-size: 18px; text-decoration: underline; font-weight: bold; } 
                 .header p { margin: 5px 0 0 0; font-size: 13px; } 
                 
-                .content-wrapper { flex-grow: 1; margin-top: 10px; }
+                .content-wrapper { flex-grow: 1; margin-top: 5px; }
                 .content-row { margin-bottom: 8px; font-size: 14px; display: flex; align-items: flex-end; }
                 .content-row .label { width: 190px; font-weight: bold; }
                 .content-row .colon { width: 20px; }
@@ -2818,12 +2819,42 @@
                     font-weight: bold;
                 }
                 
-                .footer-wrapper { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 5px;}
-                .nominal-box { background: #f0f0f0; padding: 10px 15px; font-size: 16px; font-weight: bold; border: 2px solid #000; display: inline-block; }
+                /* PENYESUAIAN LAYOUT BAWAH (FOOTER) AGAR PRESISI DAN TIDAK TABRAKAN */
+                .footer-wrapper { 
+                    display: flex; 
+                    justify-content: space-between; 
+                    align-items: flex-end; 
+                    margin-top: 20px;
+                    width: 100%;
+                }
                 
-                .signatures { display: flex; gap: 40px; text-align: center; }
-                .sig-box { width: 200px; font-size: 13px; }
-                .sig-line { margin-top: 45px; border-bottom: 1px solid #000; margin-bottom: 5px; }
+                .nominal-box { 
+                    background: #f0f0f0; 
+                    padding: 10px 20px; 
+                    font-size: 14px; 
+                    font-weight: bold; 
+                    border: 2px solid #000; 
+                    display: inline-block;
+                    min-width: 180px;
+                }
+                
+                .signatures { 
+                    display: flex; 
+                    gap: 30px; 
+                    justify-content: flex-end;
+                }
+                
+                .sig-box { 
+                    width: 180px; 
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    text-align: center;
+                }
+                
+                .sig-title { font-size: 13px; height: 30px; }
+                .sig-line { width: 100%; margin-top: 50px; border-bottom: 1px solid #000; margin-bottom: 5px; }
+                .sig-name { font-size: 13px; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
                 
             </style></head><body onload="window.print();">
                 ${receiptHTML}
