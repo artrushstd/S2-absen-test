@@ -2699,9 +2699,14 @@
                         <div class="content-row"><div class="label">No. Referensi</div><div class="colon">:</div><div class="value">UK-${item.id}-${item.tanggal.replace(/-/g,'')}</div></div>
                         <div class="content-row"><div class="label">Tanggal</div><div class="colon">:</div><div class="value">${item.tanggal}</div></div>
                         <div class="content-row"><div class="label">Diserahkan Kepada</div><div class="colon">:</div><div class="value"><strong>${item.penerima}</strong></div></div>
-                        <div class="content-row"><div class="label">Melalui</div><div class="colon">:</div><div class="value">${empName}</div></div>
+                        <div class="content-row"><div class="label">Melalui (Perantara)</div><div class="colon">:</div><div class="value">${empName}</div></div>
                         <div class="content-row"><div class="label">Keperluan</div><div class="colon">:</div><div class="value">${item.keterangan}</div></div>
                         <div class="content-row"><div class="label">Status & Metode</div><div class="colon">:</div><div class="value">${item.status_pembayaran} - <strong>${metode}</strong></div></div>
+                    </div>
+                    
+                    <!-- KOTAK PERINGATAN DITAMBAHKAN DI SINI -->
+                    <div class="warning-box">
+                        PERHATIAN: KWITANSI INI HANYA SAH JIKA DISERAHKAN BERSAMAAN DENGAN UANG TUNAI. JANGAN DITERIMA/DITANDATANGANI JIKA UANG BELUM DITERIMA SESUAI NOMINAL!
                     </div>
                     
                     <div class="footer-wrapper">
@@ -2713,9 +2718,9 @@
                                 <div>${item.user_input} (Admin)</div>
                             </div>
                             <div class="sig-box">
-                                <div>Penerima / Perantara,</div>
+                                <div>Penerima Akhir,</div>
                                 <div class="sig-line"></div>
-                                <div>${empName}</div>
+                                <div>( ${item.penerima} )</div>
                             </div>
                         </div>
                     </div>
@@ -2723,7 +2728,6 @@
             `;
         
             let html = `<html><head><title>Kwitansi Pengeluaran</title><style>
-                /* Ubah menjadi A4 Portrait dengan margin 10mm */
                 @page { size: A4 portrait; margin: 10mm; } 
                 body { 
                     font-family: "Courier New", Courier, monospace; 
@@ -2734,7 +2738,6 @@
                 } 
                 
                 .receipt-container { 
-                    /* Set tinggi persis di bawah setengah kertas A4 (Kertas A4 tingginya 297mm, setengahnya ~148mm) */
                     height: 135mm; 
                     padding: 15px 25px; 
                     border: 2px dashed #333; 
@@ -2750,12 +2753,21 @@
                 
                 .content-wrapper { flex-grow: 1; }
                 .content-row { margin-bottom: 8px; font-size: 14px; display: flex; align-items: flex-end; }
-                .content-row .label { width: 160px; font-weight: bold; }
+                .content-row .label { width: 170px; font-weight: bold; }
                 .content-row .colon { width: 20px; }
                 .content-row .value { flex: 1; border-bottom: 1px dotted #666; }
                 
-                /* Penyesuaian footer agar pas di format Portrait yang lebih sempit */
-                .footer-wrapper { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 10px; }
+                /* STYLE UNTUK KOTAK PERINGATAN */
+                .warning-box {
+                    border: 2px solid #000;
+                    padding: 8px 10px;
+                    margin: 15px 0;
+                    font-size: 13px;
+                    text-align: center;
+                    font-weight: bold;
+                }
+                
+                .footer-wrapper { display: flex; justify-content: space-between; align-items: flex-end; }
                 .nominal-box { background: #f0f0f0; padding: 10px 15px; font-size: 16px; font-weight: bold; border: 2px solid #000; display: inline-block; }
                 
                 .signatures { display: flex; gap: 30px; text-align: center; }
@@ -2763,7 +2775,6 @@
                 .sig-line { margin-top: 45px; border-bottom: 1px solid #000; margin-bottom: 5px; }
                 
             </style></head><body onload="window.print();">
-                <!-- Hanya dipanggil 1 kali agar bagian bawah kertas A4 kosong -->
                 ${receiptHTML}
             </body></html>`;
             
